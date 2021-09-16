@@ -3,7 +3,7 @@
     "items": [
       {
         "type": "action",
-        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
           "label": "Message",
@@ -12,7 +12,7 @@
       },
       {
         "type": "action",
-        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
           "label": "Spot Balance",
@@ -21,7 +21,7 @@
       },
       {
         "type": "action",
-        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
           "label": "Future Balance",

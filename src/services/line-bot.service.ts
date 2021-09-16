@@ -7,6 +7,7 @@ import lineClient from '../configs/line.config';
 import * as Types from '@line/bot-sdk/lib/types';
 import { QuickReply } from '@line/bot-sdk/lib/types';
 import * as quickReply from '../template-message/quick-reply/quick-reply.json';
+import { DEFAULT_MSG, FUTURE_BALANCE, SPOT_BALANCE } from '../constants/message.constant';
 
 @Injectable()
 export class LineBotService {
@@ -24,23 +25,26 @@ export class LineBotService {
     console.log('from line');
     const messageEvent: MessageEvent = events[0];
     const { message, replyToken } = messageEvent;
-    const quickReplyMessage = [
-      {
-        'type': 'text',
-        'text': 'Hello Quick Reply!',
-      },
-    ] as Types.Message[];
     let replyText = '';
     if (message.type == 'text') {
-      if (message.text == 'all coins') {
+      if (message.text == SPOT_BALANCE) {
         const resp = await this.binanceInfoService.getSpotBalance();
         replyText = JSON.stringify(resp);
+      } else if (message.text == FUTURE_BALANCE) {
+        const resp = await this.binanceInfoService.getFutureBalance();
+        replyText = JSON.stringify(resp);
       } else {
-        replyText = message.text;
+        replyText = DEFAULT_MSG;
       }
     } else {
-      replyText = 'ไม่มีอะไรจะเซ่ด';
+      replyText = DEFAULT_MSG;
     }
+    const quickReplyMessage = [
+      {
+        type: 'text',
+        text: replyText,
+      },
+    ] as Types.Message[];
     quickReplyMessage[0].quickReply = quickReply['quickReply'] as QuickReply;
     return lineClient.replyMessage(replyToken, quickReplyMessage);
   }
