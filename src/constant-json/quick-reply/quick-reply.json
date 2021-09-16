@@ -6,8 +6,8 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
-          "label": "Message",
-          "text": "Hello World!"
+          "label": "Current Position",
+          "text": "current position"
         }
       },
       {

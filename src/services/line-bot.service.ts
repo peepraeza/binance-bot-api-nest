@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { MessageEvent } from '@line/bot-sdk';
+import { FlexMessage, Message, MessageEvent } from '@line/bot-sdk';
 import { getConfig } from '../configs/config';
 import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import { BinanceInfoService } from './binance-info.service';
 import lineClient from '../configs/line.config';
 import * as Types from '@line/bot-sdk/lib/types';
-import { QuickReply } from '@line/bot-sdk/lib/types';
-import * as quickReply from '../template-message/quick-reply/quick-reply.json';
-import { DEFAULT_MSG, FUTURE_BALANCE, SPOT_BALANCE } from '../constants/message.constant';
+import * as quickReply from '../constant-json/quick-reply/quick-reply.json';
+import * as flexMsg from '../constant-json/flex-message/flex-msg.json';
+import { CURRENT_POSITION, DEFAULT_MSG, FUTURE_BALANCE, SPOT_BALANCE } from '../constants/message.constant';
 
 @Injectable()
 export class LineBotService {
@@ -25,7 +25,7 @@ export class LineBotService {
     console.log('from line');
     const messageEvent: MessageEvent = events[0];
     const { message, replyToken } = messageEvent;
-    let replyText = '';
+    let replyText = DEFAULT_MSG;
     if (message.type == 'text') {
       if (message.text == SPOT_BALANCE) {
         const resp = await this.binanceInfoService.getSpotBalance();
@@ -33,20 +33,13 @@ export class LineBotService {
       } else if (message.text == FUTURE_BALANCE) {
         const resp = await this.binanceInfoService.getFutureBalance();
         replyText = JSON.stringify(resp);
-      } else {
-        replyText = DEFAULT_MSG;
+      } else if (message.text == CURRENT_POSITION) {
+        const resp = await this.binanceInfoService.getCurrentPosition();
       }
-    } else {
-      replyText = DEFAULT_MSG;
     }
-    const quickReplyMessage = [
-      {
-        type: 'text',
-        text: replyText,
-      },
-    ] as Types.Message[];
-    quickReplyMessage[0].quickReply = quickReply['quickReply'] as QuickReply;
-    return lineClient.replyMessage(replyToken, quickReplyMessage);
+    const msg = this.generateMessage(replyText);
+    // const flex = flexMsg['flexMsg'] as FlexMessage;
+    return lineClient.replyMessage(replyToken, msg);
   }
 
   sendAlertMessage(req: TradingViewReqDto): any {
@@ -54,5 +47,15 @@ export class LineBotService {
     const coin = symbol.replace('USDT', '');
     const text = `Alert ${coin}\nStatus: ${side}\nEntry Price: ${openPrice}`;
     return lineClient.pushMessage(this.lineUserId, { type: 'text', text: text });
+  }
+
+  generateMessage(replyText: string): Message[] {
+    return [
+      {
+        type: 'text',
+        text: replyText,
+        quickReply: quickReply['quickReply'],
+      },
+    ] as Types.Message[];
   }
 }
