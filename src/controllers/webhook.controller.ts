@@ -3,7 +3,7 @@ import { AppService } from '../services/app.service';
 import { BinanceOrderService } from '../services/binance-order.service';
 import { LineBotService } from '../services/line-bot.service';
 import { TradingViewGuard } from '../guards/trading-view.guard';
-import { TradingViewReqDto } from '../dtos/webhook/trading-view.req.dto';
+import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import { WebhookRequestBody } from '@line/bot-sdk';
 
 @Controller('/webhook')

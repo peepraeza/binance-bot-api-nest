@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TradingViewReqDto } from '../dtos/webhook/trading-view.req.dto';
+import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import { LineBotService } from './line-bot.service';
 import { BinanceInfoService } from './binance-info.service';
 

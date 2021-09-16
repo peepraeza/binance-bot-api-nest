@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MessageEvent } from '@line/bot-sdk';
 import { getConfig } from '../configs/config';
-import { TradingViewReqDto } from '../dtos/webhook/trading-view.req.dto';
+import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import { BinanceInfoService } from './binance-info.service';
 import lineClient from '../configs/line.config';
 

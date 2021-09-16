@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import binanceFuture from '../configs/binance-future.config';
 import binanceSpot from '../configs/binance-spot.config';
-import { FuturePositionDto, PositionDto } from '../dtos/future-position.dto';
+import { FuturePositionDto, PositionDto } from '../dto/future-position.dto';
 
 @Injectable()
 export class BinanceInfoService {
