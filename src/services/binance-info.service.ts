@@ -1,31 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import binanceFuture from '../configs/binance-future.config';
-import binanceSpot from '../configs/binance-spot.config';
-import { FuturePositionDto, PositionDto } from '../dto/future-position.dto';
+import binance from '../configs/binance.config';
+import { PositionDto } from '../dto/future-position.dto';
+import fs = require('fs');
+import { retry } from 'rxjs/operators';
 
 @Injectable()
 export class BinanceInfoService {
 
   async getSpotBalance(): Promise<object> {
-    const balance = await binanceSpot.fetchBalance();
-    const free = balance['free'];
-    const mapKey = {};
-    for (const prop in free) {
-      if (free[prop] > 0) {
-        mapKey[prop] = free[prop];
-      }
-    }
-    return mapKey;
+    const balance = await binance.spot.balance();
+    console.log(balance);
+    return {};
   }
 
   async getFutureBalance(): Promise<object> {
-    const balance = await binanceFuture.fetchBalance();
-    return balance['USDT'];
+    const balance = await binance.futures.balance();
+    console.log(balance);
+    return {};
+    // return balance['USDT'];
   }
 
   async getCurrentPosition(): Promise<PositionDto[]> {
-    const balance = await binanceFuture.fetchBalance();
-    const futurePositionDto: FuturePositionDto = balance['info'];
-    return futurePositionDto.positions.filter(position => +position.positionAmt > 0);
+    const positions = await binance.futures.positionRisk();
+    const currentPosition:PositionDto[] = positions.filter(position => +position.positionAmt > 0);
+    console.log(currentPosition);
+    return null;
   }
 }

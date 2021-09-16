@@ -7,4 +7,6 @@ export const clientConfig: ClientConfig = {
 };
 const lineClient = new Client(clientConfig);
 
+console.log('lineConfig');
+
 export default lineClient;

@@ -1,0 +1,33 @@
+{
+  "quickReply": {
+    "items": [
+      {
+        "type": "action",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
+        "action": {
+          "type": "message",
+          "label": "Current Position",
+          "text": "current position"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
+        "action": {
+          "type": "message",
+          "label": "Spot Balance",
+          "text": "spot balance"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
+        "action": {
+          "type": "message",
+          "label": "Future Balance",
+          "text": "future balance"
+        }
+      }
+    ]
+  }
+}
