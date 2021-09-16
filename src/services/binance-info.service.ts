@@ -10,20 +10,19 @@ export class BinanceInfoService {
   async getSpotBalance(): Promise<object> {
     const balance = await binance.spot.balance();
     console.log(balance);
-    return {};
+    return balance;
   }
 
   async getFutureBalance(): Promise<object> {
     const balance = await binance.futures.balance();
     console.log(balance);
-    return {};
-    // return balance['USDT'];
+    return balance;
   }
 
   async getCurrentPosition(): Promise<PositionDto[]> {
     const positions = await binance.futures.positionRisk();
     const currentPosition:PositionDto[] = positions.filter(position => +position.positionAmt > 0);
     console.log(currentPosition);
-    return null;
+    return currentPosition;
   }
 }
