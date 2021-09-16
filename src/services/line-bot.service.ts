@@ -35,9 +35,9 @@ export class LineBotService {
   }
 
   sendAlertMessage(req: TradingViewReqDto): any {
-    const { side, symbol, open_price } = req;
+    const { side, symbol, openPrice } = req;
     const coin = symbol.replace('USDT', '');
-    const text = `Alert ${coin}\nStatus: ${side}\nEntry Price: ${open_price}`;
+    const text = `Alert ${coin}\nStatus: ${side}\nEntry Price: ${openPrice}`;
     return lineClient.pushMessage(this.lineUserId, { type: 'text', text: text });
   }
 }
