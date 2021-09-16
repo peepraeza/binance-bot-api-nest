@@ -1,5 +1,4 @@
 export type KeyConfig =
-  'APPLICATION_NAME' |
   'NODE_ENV' |
   'DB_HOST' |
   'DB_PORT' |
