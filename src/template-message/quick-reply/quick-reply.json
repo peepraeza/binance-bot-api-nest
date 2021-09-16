@@ -1,0 +1,33 @@
+{
+  "quickReply": {
+    "items": [
+      {
+        "type": "action",
+        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "action": {
+          "type": "message",
+          "label": "Message",
+          "text": "Hello World!"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "action": {
+          "type": "message",
+          "label": "Spot Balance",
+          "text": "spot balance"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn1.iconfinder.com/data/icons/mix-color-3/502/Untitled-1-512.png",
+        "action": {
+          "type": "message",
+          "label": "Future Balance",
+          "text": "future balance"
+        }
+      }
+    ]
+  }
+}

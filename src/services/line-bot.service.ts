@@ -4,6 +4,9 @@ import { getConfig } from '../configs/config';
 import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import { BinanceInfoService } from './binance-info.service';
 import lineClient from '../configs/line.config';
+import * as Types from '@line/bot-sdk/lib/types';
+import { QuickReply } from '@line/bot-sdk/lib/types';
+import * as quickReply from '../template-message/quick-reply/quick-reply.json';
 
 @Injectable()
 export class LineBotService {
@@ -18,8 +21,15 @@ export class LineBotService {
   }
 
   async handleReplyMessage(events: any[]): Promise<any> {
+    console.log('from line');
     const messageEvent: MessageEvent = events[0];
     const { message, replyToken } = messageEvent;
+    const quickReplyMessage = [
+      {
+        'type': 'text',
+        'text': 'Hello Quick Reply!',
+      },
+    ] as Types.Message[];
     let replyText = '';
     if (message.type == 'text') {
       if (message.text == 'all coins') {
@@ -31,13 +41,14 @@ export class LineBotService {
     } else {
       replyText = 'ไม่มีอะไรจะเซ่ด';
     }
-    return lineClient.replyMessage(replyToken, { type: 'text', text: replyText });
+    quickReplyMessage[0].quickReply = quickReply['quickReply'] as QuickReply;
+    return lineClient.replyMessage(replyToken, quickReplyMessage);
   }
 
   sendAlertMessage(req: TradingViewReqDto): any {
-    const { side, symbol, open_price } = req;
+    const { side, symbol, openPrice } = req;
     const coin = symbol.replace('USDT', '');
-    const text = `Alert ${coin}\nStatus: ${side}\nEntry Price: ${open_price}`;
+    const text = `Alert ${coin}\nStatus: ${side}\nEntry Price: ${openPrice}`;
     return lineClient.pushMessage(this.lineUserId, { type: 'text', text: text });
   }
 }
