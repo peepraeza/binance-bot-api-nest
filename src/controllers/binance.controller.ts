@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { BinanceOrderService } from '../services/binance-order.service';
 import { BinanceInfoService } from '../services/binance-info.service';
 
@@ -6,6 +6,7 @@ import { BinanceInfoService } from '../services/binance-info.service';
 export class BinanceController {
   constructor(
     private readonly binanceInfoService: BinanceInfoService,
+    private readonly binanceOrderService: BinanceOrderService,
   ) {
   }
 
@@ -18,4 +19,18 @@ export class BinanceController {
   async getFutureBalance(): Promise<object> {
     return this.binanceInfoService.getFutureBalance();
   }
+
+  @Get('/price/:symbol')
+  async getMarkPrice(
+    @Param('symbol') symbol: string,
+  ): Promise<number> {
+    return this.binanceOrderService.calculateQuantity(symbol);
+  }
+
+  @Get('/current-position')
+  async getCurrentPosition(): Promise<object> {
+    return this.binanceInfoService.getCurrentPosition();
+  }
+
+
 }

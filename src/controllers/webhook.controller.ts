@@ -24,7 +24,7 @@ export class WebhookController {
   @Post('/trading-view')
   async tradingViewWebhook(
     @Body() dto: TradingViewReqDto,
-  ): Promise<object> {
+  ): Promise<void> {
     return await this.binanceBotService.buySellPosition(dto);
   }
 
