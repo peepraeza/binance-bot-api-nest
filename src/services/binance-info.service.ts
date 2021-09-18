@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import binance from '../configs/binance.config';
 import { PositionDto } from '../dto/future-position.dto';
-import fs = require('fs');
-import { retry } from 'rxjs/operators';
 
 @Injectable()
 export class BinanceInfoService {
@@ -21,7 +19,7 @@ export class BinanceInfoService {
 
   async getCurrentPosition(): Promise<PositionDto[]> {
     const positions = await binance.futures.positionRisk();
-    const currentPosition:PositionDto[] = positions.filter(position => +position.positionAmt > 0);
+    const currentPosition:PositionDto[] = positions.filter(position => +position.positionAmt != 0);
     console.log(currentPosition);
     return currentPosition;
   }

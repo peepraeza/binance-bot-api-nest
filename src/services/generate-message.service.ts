@@ -12,7 +12,6 @@ export class GenerateMessageService {
   generateFlexMessage(data: TradingViewReqDto): FlexContainer {
     const coin = data.symbol.replace('USDT', '');
     const imageUrl = symbolImage[coin];
-    console.log('Hello World');
     const msg = {
       'type': 'bubble',
       'body': {

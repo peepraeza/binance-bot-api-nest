@@ -9,3 +9,7 @@ export function getConfig(key: KeyConfig): string {
 	return process.env[key];
 }
 
+export function getNumberConfig(key: KeyConfig): number {
+	return +process.env[key];
+}
+

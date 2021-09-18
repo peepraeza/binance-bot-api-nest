@@ -43,9 +43,17 @@ export class LineBotService {
     return lineClient.replyMessage(replyToken, msg);
   }
 
-  sendAlertMessage(req: TradingViewReqDto): any {
+  sendAlertSignalMessage(req: TradingViewReqDto): any {
     const flexMessage = this.generateFlexMessage(req);
     return lineClient.pushMessage(this.lineUserId, flexMessage);
+  }
+
+  sendAlertCloseAndOpenNewPositionMessage(req: TradingViewReqDto): any {
+    const flexMessage = this.generateFlexMessage(req);
+    const { symbol, side, openPrice } = req;
+    const message = `เหรียญ: ${symbol}\n ${side} แล้ว ที่ราคา: ${openPrice}`;
+    const textMessage = this.generateMessage(message);
+    return lineClient.pushMessage(this.lineUserId, textMessage);
   }
 
   generateMessage(replyText: string): Message[] {
