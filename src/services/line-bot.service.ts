@@ -19,6 +19,7 @@ import { GenerateMessageService } from './generate-message.service';
 export class LineBotService {
   private readonly lineUserId;
   private readonly lineGroupId;
+  private readonly env
 
   constructor(
     private readonly binanceInfoService: BinanceInfoService,
@@ -26,8 +27,9 @@ export class LineBotService {
   ) {
     this.lineUserId = getConfig('LINE_USER_ID');
     this.lineGroupId = getConfig('LINE_GROUP_ID');
+    this.env = getConfig('NODE_ENV');
 
-    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว!'))
+    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว! จาก '+ this.env))
   }
 
   async handleReplyMessage(events: any[]): Promise<any> {
