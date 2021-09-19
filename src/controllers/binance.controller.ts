@@ -29,7 +29,7 @@ export class BinanceController {
 
   @Get('/current-position')
   async getCurrentPosition(): Promise<object> {
-    return this.binanceInfoService.getCurrentPosition();
+    return this.binanceInfoService.getTestCurrentPosition();
   }
 
 

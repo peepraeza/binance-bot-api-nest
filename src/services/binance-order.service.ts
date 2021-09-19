@@ -6,7 +6,7 @@ import { PositionSideEnum } from '../enums/position-side.enum';
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '../entities/transaction.entity';
-import { countDecimals, dateToString, getTodayDate } from '../utils/utils';
+import { countDecimals, dateToString} from '../utils/utils';
 import binance from '../configs/binance.config';
 import { SideEnum } from '../enums/side.enum';
 import * as minNotional from '../constant-json/minNotional.json';
@@ -68,7 +68,6 @@ export class BinanceOrderService {
     // }
 
     // save transaction to database
-    // const todayDate = getTodayDate();
     const todayDate = dateToString(new Date());
     currentPosition.isTrading = false;
     currentPosition.sellDate = todayDate;
@@ -100,7 +99,6 @@ export class BinanceOrderService {
       // orderd = await binance.futures.sell(symbol, quantity, 410);
     }
     // save transaction to db
-    // const todayDate = getTodayDate();
     const todayDate = dateToString(new Date());
     const transaction = new Transaction();
     transaction.positionSide = this.positionMapping[side];

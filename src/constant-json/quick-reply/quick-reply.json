@@ -6,6 +6,15 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
+          "label": "DB Current Position",
+          "text": "db current position"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
+        "action": {
+          "type": "message",
           "label": "Current Position",
           "text": "current position"
         }

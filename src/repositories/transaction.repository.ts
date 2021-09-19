@@ -11,5 +11,11 @@ export class TransactionRepository extends Repository<Transaction> {
       .getOne();
   }
 
+  async findAllOpeningPosition(): Promise<Transaction[]> {
+    return this.createQueryBuilder('t')
+      .where('t.isTrading = 1')
+      .getMany()
+  }
+
 
 }
