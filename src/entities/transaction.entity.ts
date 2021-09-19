@@ -32,15 +32,15 @@ export class Transaction {
   buyPrice: number;
 
   @Column({ type: 'datetime', name: 'buy_date' })
-  buyDate: Date;
+  buyDate: Date | string;
 
   @Column('double', { name: 'sell_price', transformer: new ColumnNumericTransformer(), nullable: true })
   sellPrice: number;
 
   @Column({ type: 'datetime', name: 'sell_date', nullable: true })
-  sellDate: Date;
+  sellDate: Date | string;
 
   @Column({ type: 'datetime', name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt: Date | string;
 
 }
