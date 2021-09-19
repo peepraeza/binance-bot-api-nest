@@ -6,7 +6,13 @@ import { BinanceInfoService } from './binance-info.service';
 import lineClient from '../configs/line.config';
 import * as Types from '@line/bot-sdk/lib/types';
 import * as quickReply from '../constant-json/quick-reply/quick-reply.json';
-import { CURRENT_POSITION, DEFAULT_MSG, FUTURE_BALANCE, SPOT_BALANCE } from '../constants/message.constant';
+import {
+  CURRENT_POSITION,
+  CURRENT_POSITION_TEST,
+  DEFAULT_MSG,
+  FUTURE_BALANCE,
+  SPOT_BALANCE,
+} from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
 
 @Injectable()
@@ -20,6 +26,8 @@ export class LineBotService {
   ) {
     this.lineUserId = getConfig('LINE_USER_ID');
     this.lineGroupId = getConfig('LINE_GROUP_ID');
+
+    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว!'))
   }
 
   async handleReplyMessage(events: any[]): Promise<any> {
@@ -35,8 +43,13 @@ export class LineBotService {
         const resp = await this.binanceInfoService.getFutureBalance();
         replyText = JSON.stringify(resp);
       } else if (message.text == CURRENT_POSITION) {
-        const resp = await this.binanceInfoService.getCurrentPosition();
-        replyText = JSON.stringify(resp);
+        // const resp = await this.binanceInfoService.getCurrentPosition();
+        const resp = await this.binanceInfoService.getCurrentPosition2();
+        replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+        // replyText = JSON.stringify(resp);
+      } else if (message.text == CURRENT_POSITION_TEST) {
+        const resp = await this.binanceInfoService.getTestCurrentPosition();
+        replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
       }
     }
     const msg = this.generateMessage(replyText);
