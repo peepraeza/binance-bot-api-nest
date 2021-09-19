@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { FlexMessage } from '@line/bot-sdk';
 import { FlexContainer } from '@line/bot-sdk/lib/types';
 import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import * as symbolImage from '../constant-json/symbol-image.json';
 import { dateToString } from '../utils/utils';
+import { OpeningPositionDto } from '../dto/opening-position.dto';
 
 @Injectable()
 export class GenerateMessageService {
@@ -102,5 +102,16 @@ export class GenerateMessageService {
     } as FlexContainer;
 
     return msg;
+  }
+
+  generateCurrentOpeningPositionMessage(data: OpeningPositionDto): string {
+    const header = `สถานการณ์ ณ เวลาปัจจุบัน: ${data.updateTime}`;
+    let body = '';
+    data.position.forEach(position => {
+      body += `\n\nSymbol: ${position.symbol}\nSide: ${position.positionSide}`;
+      body += `\nEntry Price: ${position.entryPrice}\nCurrent Price: ${position.markPrice}\nP/L(%): ${position.profitLossPercentage}%`;
+      body += `\nDuration: ${position.duration}`;
+    });
+    return header + body;
   }
 }
