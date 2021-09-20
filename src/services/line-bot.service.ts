@@ -8,18 +8,18 @@ import * as Types from '@line/bot-sdk/lib/types';
 import * as quickReply from '../constant-json/quick-reply/quick-reply.json';
 import {
   CURRENT_POSITION,
-  CURRENT_POSITION_TEST,
-  DEFAULT_MSG,
+  CURRENT_POSITION_TEST, DEFAULT_MSG,
   FUTURE_BALANCE,
   SPOT_BALANCE,
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
+import { OpeningPositionDto } from '../dto/opening-position.dto';
 
 @Injectable()
 export class LineBotService {
   private readonly lineUserId;
   private readonly lineGroupId;
-  private readonly env
+  private readonly env;
 
   constructor(
     private readonly binanceInfoService: BinanceInfoService,
@@ -46,8 +46,10 @@ export class LineBotService {
         replyText = JSON.stringify(resp);
       } else if (message.text == CURRENT_POSITION) {
         // const resp = await this.binanceInfoService.getCurrentPosition();
-        const resp = await this.binanceInfoService.getCurrentPosition2();
-        replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+        // replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+        const resp = await this.binanceInfoService.getTestCurrentPosition();
+        const flexMessage = await this.generateFlexCurrentPosition(resp);
+        return lineClient.replyMessage(replyToken, flexMessage);
         // replyText = JSON.stringify(resp);
       } else if (message.text == CURRENT_POSITION_TEST) {
         const resp = await this.binanceInfoService.getTestCurrentPosition();
@@ -87,6 +89,16 @@ export class LineBotService {
     return {
       type: 'flex',
       altText: `${coin} ${data.side} Alert!`,
+      contents: flex,
+      quickReply: quickReply['quickReply'] as QuickReply,
+    };
+  }
+
+  async generateFlexCurrentPosition(req: OpeningPositionDto): Promise<FlexMessage> {
+    const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(req);
+    return {
+      type: 'flex',
+      altText: `Current Position`,
       contents: flex,
       quickReply: quickReply['quickReply'] as QuickReply,
     };
