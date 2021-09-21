@@ -1,6 +1,7 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToOne } from 'typeorm';
 import { ColumnNumericTransformer } from './transformer/column-numeric.transformer';
 import { PositionSideEnum } from '../enums/position-side.enum';
+import { ProfitLossHistory } from './profit-loss-history.entity';
 
 @Entity('transaction')
 export class Transaction {
@@ -42,5 +43,8 @@ export class Transaction {
 
   @Column({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date | string;
+
+  @OneToOne(() => ProfitLossHistory, (profitLossHistory: ProfitLossHistory) => profitLossHistory.transaction)
+  profitLossHistory: ProfitLossHistory;
 
 }

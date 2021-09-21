@@ -12,6 +12,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DbConfig } from '../configs/db.config';
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { AppConfigRepository } from '../repositories/appconfig.repository';
+import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -19,7 +20,7 @@ import { AppConfigRepository } from '../repositories/appconfig.repository';
   }), TypeOrmModule.forRootAsync({
     useClass: DbConfig,
   }),
-    TypeOrmModule.forFeature([TransactionRepository, AppConfigRepository])],
+    TypeOrmModule.forFeature([TransactionRepository, AppConfigRepository, ProfitLossHistoryRepository])],
   controllers: [AppController, WebhookController, BinanceController],
   providers: [AppService, BinanceOrderService, LineBotService, BinanceInfoService, GenerateMessageService],
 

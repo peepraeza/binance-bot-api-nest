@@ -6,11 +6,13 @@ import { PositionSideEnum } from '../enums/position-side.enum';
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '../entities/transaction.entity';
-import { countDecimals, dateToString} from '../utils/utils';
+import { countDecimals, dateToString, duration } from '../utils/utils';
 import binance from '../configs/binance.config';
 import { SideEnum } from '../enums/side.enum';
 import * as minNotional from '../constant-json/minNotional.json';
 import { AppConfigRepository } from '../repositories/appconfig.repository';
+import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
+import { ProfitLossHistory } from '../entities/profit-loss-history.entity';
 
 @Injectable()
 export class BinanceOrderService {
@@ -21,6 +23,8 @@ export class BinanceOrderService {
     private readonly binanceInfoService: BinanceInfoService,
     @InjectRepository(TransactionRepository)
     private transactionRepository: TransactionRepository,
+    @InjectRepository(ProfitLossHistoryRepository)
+    private profitLossHistoryRepository: ProfitLossHistoryRepository,
     private appConfigRepository: AppConfigRepository,
   ) {
   }
@@ -60,7 +64,7 @@ export class BinanceOrderService {
 
   async closeCurrentPosition(currentPosition: Transaction, closePrice?: number): Promise<object> {
     // close binance position
-    const { symbol, positionSide, quantity } = currentPosition;
+    const { symbol, quantity, buyPrice, sellPrice, positionSide, buyDate, sellDate, transactionId } = currentPosition;
     // if (positionSide == PositionSideEnum.BUY) {
     //   await binance.futures.marketSell(symbol, quantity);
     // } else {
@@ -74,6 +78,17 @@ export class BinanceOrderService {
     currentPosition.sellPrice = closePrice;
     currentPosition.updatedAt = todayDate;
     await this.transactionRepository.save(currentPosition);
+
+    const profitLossHistory = new ProfitLossHistory();
+    const profit = this.binanceInfoService.calProfitLoss(quantity, buyPrice, sellPrice, positionSide);
+    const profitPercent = this.binanceInfoService.calProfitLossPercentage(buyPrice, sellPrice, positionSide);
+    profitLossHistory.transactionId = transactionId;
+    profitLossHistory.pl = profit;
+    profitLossHistory.plPercentage = profitPercent;
+    profitLossHistory.duration = duration(new Date(buyDate), new Date(sellDate));
+    profitLossHistory.resultStatus = profitPercent > 0 ? 'W' : 'L';
+    profitLossHistory.sellDate = new Date(sellDate);
+    await this.profitLossHistoryRepository.save(profitLossHistory);
 
     // return data from binance
     return { closePrice: closePrice };
@@ -104,10 +119,10 @@ export class BinanceOrderService {
     transaction.positionSide = this.positionMapping[side];
     transaction.quantity = quantity;
     transaction.isTrading = true;
-    transaction.buyDate = todayDate
+    transaction.buyDate = todayDate;
     transaction.symbol = symbol;
     transaction.buyPrice = openPrice;
-    transaction.updatedAt = todayDate
+    transaction.updatedAt = todayDate;
     await this.transactionRepository.save(transaction);
 
     // return data from binance
