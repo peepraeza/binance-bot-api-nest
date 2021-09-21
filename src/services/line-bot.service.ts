@@ -10,7 +10,7 @@ import {
   CURRENT_POSITION,
   CURRENT_POSITION_TEST, DEFAULT_MSG,
   FUTURE_BALANCE,
-  SPOT_BALANCE,
+  SPOT_BALANCE, TRADING_SUMMARY,
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
 import { OpeningPositionDto } from '../dto/opening-position.dto';
@@ -54,6 +54,9 @@ export class LineBotService {
       } else if (message.text == CURRENT_POSITION_TEST) {
         const resp = await this.binanceInfoService.getTestCurrentPosition();
         replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+      } else if (message.text == TRADING_SUMMARY) {
+        const resp = await this.binanceInfoService.getTradingHistory();
+        replyText = this.generateMessageService.generateSummaryTradingHistory(resp);
       }
     }
     const msg = this.generateMessage(replyText);
