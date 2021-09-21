@@ -8,6 +8,8 @@ import { OpeningPositionDataDto, OpeningPositionDto } from '../dto/opening-posit
 import { dateToString, duration } from '../utils/utils';
 import { Transaction } from '../entities/transaction.entity';
 import { PositionSideEnum } from '../enums/position-side.enum';
+import { ProfitLossHistory } from '../entities/profit-loss-history.entity';
+import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
 
 @Injectable()
 export class BinanceInfoService {
@@ -16,6 +18,8 @@ export class BinanceInfoService {
     private transactionRepository: TransactionRepository,
     @InjectRepository(AppConfigRepository)
     private appConfigRepository: AppConfigRepository,
+    @InjectRepository(ProfitLossHistoryRepository)
+    private profitLossHistoryRepository: ProfitLossHistoryRepository,
   ) {
   }
 
@@ -92,6 +96,25 @@ export class BinanceInfoService {
     };
   }
 
+  // async batchSaveHistoryInfo(): Promise<void> {
+  //   const closedTransaction = await this.transactionRepository.find({ isTrading: false });
+  //   const profitLossHistories: ProfitLossHistory[] = [];
+  //   closedTransaction.map(transaction => {
+  //     const profitLossHistory = new ProfitLossHistory();
+  //     const { quantity, buyPrice, sellPrice, positionSide, buyDate, sellDate, transactionId } = transaction;
+  //     const profit = this.calProfitLoss(quantity, buyPrice, sellPrice, positionSide);
+  //     const profitPercent = this.calProfitLossPercentage(buyPrice, sellPrice, positionSide);
+  //     profitLossHistory.transactionId = transactionId;
+  //     profitLossHistory.pl = profit;
+  //     profitLossHistory.plPercentage = profitPercent
+  //     profitLossHistory.duration = duration(new Date(buyDate), new Date(sellDate));
+  //     profitLossHistory.resultStatus = profitPercent > 0 ? 'W' : 'L';
+  //     profitLossHistory.sellDate = new Date(sellDate);
+  //     profitLossHistories.push(profitLossHistory);
+  //   });
+  //   await this.profitLossHistoryRepository.save(profitLossHistories);
+  // }
+
   calProfitLossPercentage(entryPrice: number, currentPrice: number, positionSide?: string): number {
     let percentage;
     if (positionSide && positionSide == PositionSideEnum.SELL) {
@@ -101,4 +124,17 @@ export class BinanceInfoService {
     }
     return +percentage.toFixed(2);
   }
+
+  calProfitLoss(amount: number, entryPrice: number, currentPrice: number, positionSide?: string): number {
+    let profit;
+    if (positionSide && positionSide == PositionSideEnum.SELL) {
+      profit = (entryPrice - currentPrice) * amount;
+    } else {
+      profit = (currentPrice - entryPrice) * amount;
+    }
+    const profitString = '' + profit.toFixed(2);
+    return +profitString;
+  }
+
+
 }
