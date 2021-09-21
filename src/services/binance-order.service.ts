@@ -64,7 +64,7 @@ export class BinanceOrderService {
 
   async closeCurrentPosition(currentPosition: Transaction, closePrice?: number): Promise<object> {
     // close binance position
-    const { symbol, quantity, buyPrice, sellPrice, positionSide, buyDate, sellDate, transactionId } = currentPosition;
+    const { symbol, quantity, buyPrice, positionSide, buyDate, transactionId } = currentPosition;
     // if (positionSide == PositionSideEnum.BUY) {
     //   await binance.futures.marketSell(symbol, quantity);
     // } else {
@@ -80,14 +80,14 @@ export class BinanceOrderService {
     await this.transactionRepository.save(currentPosition);
 
     const profitLossHistory = new ProfitLossHistory();
-    const profit = this.binanceInfoService.calProfitLoss(quantity, buyPrice, sellPrice, positionSide);
-    const profitPercent = this.binanceInfoService.calProfitLossPercentage(buyPrice, sellPrice, positionSide);
+    const profit = this.binanceInfoService.calProfitLoss(quantity, buyPrice, closePrice, positionSide);
+    const profitPercent = this.binanceInfoService.calProfitLossPercentage(buyPrice, closePrice, positionSide);
     profitLossHistory.transactionId = transactionId;
     profitLossHistory.pl = profit;
     profitLossHistory.plPercentage = profitPercent;
-    profitLossHistory.duration = duration(new Date(buyDate), new Date(sellDate));
+    profitLossHistory.duration = duration(new Date(buyDate), new Date());
     profitLossHistory.resultStatus = profitPercent > 0 ? 'W' : 'L';
-    profitLossHistory.sellDate = new Date(sellDate);
+    profitLossHistory.sellDate = todayDate
     await this.profitLossHistoryRepository.save(profitLossHistory);
 
     // return data from binance

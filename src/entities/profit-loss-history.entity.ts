@@ -32,7 +32,7 @@ export class ProfitLossHistory {
   duration: string;
 
   @Column('date', { name: 'sell_date' })
-  sellDate: Date;
+  sellDate: Date | string;
 
   @OneToOne(() => Transaction, (transaction: Transaction) => transaction.profitLossHistory)
   @JoinColumn({ name: 'transaction_id' })

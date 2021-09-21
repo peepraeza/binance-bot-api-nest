@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { BinanceOrderService } from '../services/binance-order.service';
 import { BinanceInfoService } from '../services/binance-info.service';
+import { TradingHistoryDto } from '../dto/trading-history.dto';
 
 @Controller('/api/binance')
 export class BinanceController {
@@ -32,5 +33,9 @@ export class BinanceController {
     return this.binanceInfoService.getTestCurrentPosition();
   }
 
+  @Get('/save-history')
+  async saveTradingHistory(): Promise<void> {
+    return this.binanceInfoService.batchSaveHistoryInfo();
+  }
 
 }

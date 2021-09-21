@@ -24,6 +24,15 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
+          "label": "Trading Summary",
+          "text": "trading summary"
+        }
+      },
+      {
+        "type": "action",
+        "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
+        "action": {
+          "type": "message",
           "label": "Spot Balance",
           "text": "spot balance"
         }

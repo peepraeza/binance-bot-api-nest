@@ -8,8 +8,11 @@ import { OpeningPositionDataDto, OpeningPositionDto } from '../dto/opening-posit
 import { dateToString, duration } from '../utils/utils';
 import { Transaction } from '../entities/transaction.entity';
 import { PositionSideEnum } from '../enums/position-side.enum';
-import { ProfitLossHistory } from '../entities/profit-loss-history.entity';
 import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
+import { plainToClass } from 'class-transformer';
+import { TradingHistoryDto } from '../dto/trading-history.dto';
+import { YYYY_MM_DD } from '../constants/constants';
+import { ProfitLossHistory } from '../entities/profit-loss-history.entity';
 
 @Injectable()
 export class BinanceInfoService {
@@ -96,24 +99,37 @@ export class BinanceInfoService {
     };
   }
 
-  // async batchSaveHistoryInfo(): Promise<void> {
-  //   const closedTransaction = await this.transactionRepository.find({ isTrading: false });
-  //   const profitLossHistories: ProfitLossHistory[] = [];
-  //   closedTransaction.map(transaction => {
-  //     const profitLossHistory = new ProfitLossHistory();
-  //     const { quantity, buyPrice, sellPrice, positionSide, buyDate, sellDate, transactionId } = transaction;
-  //     const profit = this.calProfitLoss(quantity, buyPrice, sellPrice, positionSide);
-  //     const profitPercent = this.calProfitLossPercentage(buyPrice, sellPrice, positionSide);
-  //     profitLossHistory.transactionId = transactionId;
-  //     profitLossHistory.pl = profit;
-  //     profitLossHistory.plPercentage = profitPercent
-  //     profitLossHistory.duration = duration(new Date(buyDate), new Date(sellDate));
-  //     profitLossHistory.resultStatus = profitPercent > 0 ? 'W' : 'L';
-  //     profitLossHistory.sellDate = new Date(sellDate);
-  //     profitLossHistories.push(profitLossHistory);
-  //   });
-  //   await this.profitLossHistoryRepository.save(profitLossHistories);
-  // }
+  async getTradingHistory(): Promise<TradingHistoryDto[]> {
+    const tradingHistoryDto = plainToClass(TradingHistoryDto, await this.profitLossHistoryRepository.findSummaryTradingHistory());
+    return tradingHistoryDto.map(trading => {
+      trading.sellDate = dateToString(new Date(trading.sellDate), YYYY_MM_DD);
+      const avg = '' + trading.avg.toFixed(2);
+      trading.avg = +avg;
+      trading.win = +trading.win;
+      trading.loss = +trading.loss;
+      trading.total = +trading.total;
+      return trading;
+    });
+  }
+
+  async batchSaveHistoryInfo(): Promise<void> {
+    const closedTransaction = await this.transactionRepository.find({ isTrading: false });
+    const profitLossHistories: ProfitLossHistory[] = [];
+    closedTransaction.map(transaction => {
+      const profitLossHistory = new ProfitLossHistory();
+      const { quantity, buyPrice, sellPrice, positionSide, buyDate, sellDate, transactionId } = transaction;
+      const profit = this.calProfitLoss(quantity, buyPrice, sellPrice, positionSide);
+      const profitPercent = this.calProfitLossPercentage(buyPrice, sellPrice, positionSide);
+      profitLossHistory.transactionId = transactionId;
+      profitLossHistory.pl = profit;
+      profitLossHistory.plPercentage = profitPercent
+      profitLossHistory.duration = duration(new Date(buyDate), new Date(sellDate));
+      profitLossHistory.resultStatus = profitPercent > 0 ? 'W' : 'L';
+      profitLossHistory.sellDate = new Date(sellDate);
+      profitLossHistories.push(profitLossHistory);
+    });
+    await this.profitLossHistoryRepository.save(profitLossHistories);
+  }
 
   calProfitLossPercentage(entryPrice: number, currentPrice: number, positionSide?: string): number {
     let percentage;

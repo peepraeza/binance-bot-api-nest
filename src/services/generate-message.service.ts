@@ -5,6 +5,7 @@ import * as symbolImage from '../constant-json/symbol-image.json';
 import { dateToString } from '../utils/utils';
 import { OpeningPositionDto } from '../dto/opening-position.dto';
 import { COLOR_GREEN, COLOR_RED } from '../constants/constants';
+import { TradingHistoryDto } from '../dto/trading-history.dto';
 
 
 @Injectable()
@@ -115,6 +116,15 @@ export class GenerateMessageService {
       body += `\nDuration: ${position.duration}`;
     });
     return header + body;
+  }
+
+  generateSummaryTradingHistory(data: TradingHistoryDto[]): string {
+    let body = 'ผลตอบแทนทั้งหมด';
+    data.forEach(data => {
+      body += `\n\nวันที่: ${data.sellDate}\nP/L(%): ${data.avg}%`;
+      body += `\nเทรดทั้งหมด: ${data.total} ครั้ง\nชนะ: ${data.win} ครั้ง\nแพ้: ${data.loss} ครั้ง`;
+    });
+    return body;
   }
 
   generateFlexMsgCurrentPosition(req: OpeningPositionDto): FlexContainer {
