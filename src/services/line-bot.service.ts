@@ -6,6 +6,7 @@ import { BinanceInfoService } from './binance-info.service';
 import lineClient from '../configs/line.config';
 import * as Types from '@line/bot-sdk/lib/types';
 import * as quickReply from '../constant-json/quick-reply/quick-reply.json';
+import * as flexMsg from '../constant-json/quick-reply/flex-message-football.json';
 import {
   CURRENT_POSITION,
   CURRENT_POSITION_TEST, DEFAULT_MSG,
@@ -14,6 +15,7 @@ import {
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
 import { OpeningPositionDto } from '../dto/opening-position.dto';
+import { FlexContainer } from '@line/bot-sdk/dist/types';
 
 @Injectable()
 export class LineBotService {
@@ -29,11 +31,12 @@ export class LineBotService {
     this.lineGroupId = getConfig('LINE_GROUP_ID');
     this.env = getConfig('NODE_ENV');
 
-    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว! จาก '+ this.env))
+    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว! จาก ' + this.env));
   }
 
   async handleReplyMessage(events: any[]): Promise<any> {
     console.log('from line');
+    console.log(events);
     const messageEvent: MessageEvent = events[0];
     const { message, replyToken } = messageEvent;
     let replyText = DEFAULT_MSG;
@@ -68,6 +71,11 @@ export class LineBotService {
     return lineClient.pushMessage(this.lineUserId, flexMessage);
   }
 
+  sendAlertSignalMessage2(): any {
+    const flexMessage = this.generateFlexMessage2();
+    return lineClient.pushMessage(this.lineUserId, flexMessage);
+  }
+
   sendAlertCloseAndOpenNewPositionMessage(req: TradingViewReqDto): any {
     const flexMessage = this.generateFlexMessage(req);
     const { symbol, side, openPrice } = req;
@@ -99,6 +107,16 @@ export class LineBotService {
 
   async generateFlexCurrentPosition(req: OpeningPositionDto): Promise<FlexMessage> {
     const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(req);
+    return {
+      type: 'flex',
+      altText: `Current Position`,
+      contents: flex,
+      quickReply: quickReply['quickReply'] as QuickReply,
+    };
+  }
+
+  generateFlexMessage2(): FlexMessage {
+    const flex = flexMsg['default'] as FlexContainer;
     return {
       type: 'flex',
       altText: `Current Position`,
