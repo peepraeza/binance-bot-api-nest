@@ -2,6 +2,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 @Exclude()
 export class OpeningPositionDataDto {
+  @Expose() transactionId: number;
   @Expose() symbol: string;
   @Expose() positionSide: string;
   @Expose() entryPrice: number;

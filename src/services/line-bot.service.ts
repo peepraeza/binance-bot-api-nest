@@ -1,127 +1,97 @@
-import { Injectable } from '@nestjs/common';
-import { FlexMessage, Message, MessageEvent, QuickReply } from '@line/bot-sdk';
-import { getConfig } from '../configs/config';
-import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
-import { BinanceInfoService } from './binance-info.service';
-import lineClient from '../configs/line.config';
-import * as Types from '@line/bot-sdk/lib/types';
-import * as quickReply from '../constant-json/quick-reply/quick-reply.json';
-import * as flexMsg from '../constant-json/quick-reply/flex-message-football.json';
+import { Inject, Injectable } from '@nestjs/common';
+import { MessageEvent, PostbackEvent } from '@line/bot-sdk';
 import {
+  CLOSE_POSITION,
   CURRENT_POSITION,
   CURRENT_POSITION_TEST, DEFAULT_MSG,
   FUTURE_BALANCE,
   SPOT_BALANCE, TRADING_SUMMARY,
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
-import { OpeningPositionDto } from '../dto/opening-position.dto';
-import { FlexContainer } from '@line/bot-sdk/dist/types';
+import { EventTypeEnum } from '../enums/event-type.enum';
+import { plainToClass } from 'class-transformer';
+import { ActionPositionDto } from '../dto/action-position.dto';
+import { ActionPositionEnum } from '../enums/action-position.enum';
+import { TransactionRepository } from '../repositories/transaction.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { BinanceOrderService } from './binance-order.service';
+import { SendMessageService } from './send-message.service';
 
 @Injectable()
 export class LineBotService {
-  private readonly lineUserId;
-  private readonly lineGroupId;
-  private readonly env;
 
   constructor(
-    private readonly binanceInfoService: BinanceInfoService,
-    private readonly generateMessageService: GenerateMessageService,
+    @Inject('BinanceOrderService')
+    private binanceOrderService: BinanceOrderService,
+    @Inject('GenerateMessageService')
+    private generateMessageService: GenerateMessageService,
+    @Inject('SendMessageService')
+    private sendMessageService: SendMessageService,
+    @InjectRepository(TransactionRepository)
+    private transactionRepository: TransactionRepository,
   ) {
-    this.lineUserId = getConfig('LINE_USER_ID');
-    this.lineGroupId = getConfig('LINE_GROUP_ID');
-    this.env = getConfig('NODE_ENV');
+    this.sendMessageService.sendStartServerMessage();
 
-    lineClient.pushMessage(this.lineUserId, this.generateMessage('Trading Bot พร้อมใช้งานแล้ว! จาก ' + this.env));
   }
 
-  async handleReplyMessage(events: any[]): Promise<any> {
+  async handleReplyMessage(events: any[]): Promise<void> {
     console.log('from line');
-    console.log(events);
-    const messageEvent: MessageEvent = events[0];
-    const { message, replyToken } = messageEvent;
+    await events.forEach(event => {
+      if (event.type == EventTypeEnum.MESSAGE) {
+        console.log('type message');
+        this.handleTextMessage(event);
+      } else if (event.type == EventTypeEnum.POSTBACK) {
+        console.log('type postback');
+        this.handlePostBackMessage(event);
+      }
+    });
+  }
+
+  async handleTextMessage(event: MessageEvent): Promise<any> {
+    const { message, replyToken } = event;
     let replyText = DEFAULT_MSG;
     if (message.type == 'text') {
-      if (message.text == SPOT_BALANCE) {
-        const resp = await this.binanceInfoService.getSpotBalance();
-        replyText = JSON.stringify(resp);
+      if (message.text == CLOSE_POSITION) {
+        const currentPosition = await this.binanceOrderService.getTestCurrentPosition();
+        const flex = await this.generateMessageService.generateFlexMsgTakePFAndClosePS(currentPosition);
+        return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Take Profit Or Close Position', flex);
+
       } else if (message.text == FUTURE_BALANCE) {
-        const resp = await this.binanceInfoService.getFutureBalance();
+        const resp = await this.binanceOrderService.getFutureBalance();
         replyText = JSON.stringify(resp);
+
       } else if (message.text == CURRENT_POSITION) {
-        // const resp = await this.binanceInfoService.getCurrentPosition();
+        // const resp = await this.binanceOrderService.getCurrentPosition();
         // replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
-        const resp = await this.binanceInfoService.getTestCurrentPosition();
-        const flexMessage = await this.generateFlexCurrentPosition(resp);
-        return lineClient.replyMessage(replyToken, flexMessage);
-        // replyText = JSON.stringify(resp);
+        const resp = await this.binanceOrderService.getTestCurrentPosition();
+        const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(resp);
+        return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Current Position', flex);
+
       } else if (message.text == CURRENT_POSITION_TEST) {
-        const resp = await this.binanceInfoService.getTestCurrentPosition();
+        const resp = await this.binanceOrderService.getTestCurrentPosition();
         replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+
       } else if (message.text == TRADING_SUMMARY) {
-        const resp = await this.binanceInfoService.getTradingHistory();
+        const resp = await this.binanceOrderService.getTradingHistory();
         replyText = this.generateMessageService.generateSummaryTradingHistory(resp);
       }
     }
-    const msg = this.generateMessage(replyText);
-    return lineClient.replyMessage(replyToken, msg);
+    return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
   }
 
-  sendAlertSignalMessage(req: TradingViewReqDto): any {
-    const flexMessage = this.generateFlexMessage(req);
-    return lineClient.pushMessage(this.lineUserId, flexMessage);
+  async handlePostBackMessage(event: PostbackEvent): Promise<any> {
+    const { replyToken, postback } = event;
+    const closePositionDto = plainToClass(ActionPositionDto, JSON.parse(postback.data));
+    console.log(closePositionDto);
+    let replyText;
+    if (closePositionDto.actionStatus == ActionPositionEnum.CLOSE_POSITION) {
+      const resp = await this.binanceOrderService.closePositionByTransactionId(+closePositionDto.transactionId, +closePositionDto.markPrice);
+
+      replyText = this.generateMessageService.generateClosedPositionMsg(resp);
+    } else {
+      // take profit function
+    }
+    return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
   }
 
-  sendAlertSignalMessage2(): any {
-    const flexMessage = this.generateFlexMessage2();
-    return lineClient.pushMessage(this.lineUserId, flexMessage);
-  }
-
-  sendAlertCloseAndOpenNewPositionMessage(req: TradingViewReqDto): any {
-    const flexMessage = this.generateFlexMessage(req);
-    const { symbol, side, openPrice } = req;
-    const message = `เหรียญ: ${symbol}\n ${side} แล้ว ที่ราคา: ${openPrice}`;
-    const textMessage = this.generateMessage(message);
-    return lineClient.pushMessage(this.lineUserId, textMessage);
-  }
-
-  generateMessage(replyText: string): Message[] {
-    return [
-      {
-        type: 'text',
-        text: replyText,
-        quickReply: quickReply['quickReply'],
-      },
-    ] as Types.Message[];
-  }
-
-  generateFlexMessage(data: TradingViewReqDto): FlexMessage {
-    const coin = data.symbol.replace('USDT', '');
-    const flex = this.generateMessageService.generateFlexMessage({ ...data, symbol: coin });
-    return {
-      type: 'flex',
-      altText: `${coin} ${data.side} Alert!`,
-      contents: flex,
-      quickReply: quickReply['quickReply'] as QuickReply,
-    };
-  }
-
-  async generateFlexCurrentPosition(req: OpeningPositionDto): Promise<FlexMessage> {
-    const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(req);
-    return {
-      type: 'flex',
-      altText: `Current Position`,
-      contents: flex,
-      quickReply: quickReply['quickReply'] as QuickReply,
-    };
-  }
-
-  generateFlexMessage2(): FlexMessage {
-    const flex = flexMsg['default'] as FlexContainer;
-    return {
-      type: 'flex',
-      altText: `Current Position`,
-      contents: flex,
-      quickReply: quickReply['quickReply'] as QuickReply,
-    };
-  }
 }

@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { FlexContainer } from '@line/bot-sdk/lib/types';
+import { FlexBubble, FlexContainer } from '@line/bot-sdk/lib/types';
 import { TradingViewReqDto } from '../dto/webhook/trading-view.req.dto';
 import * as symbolImage from '../constant-json/symbol-image.json';
 import { dateToString } from '../utils/utils';
 import { OpeningPositionDto } from '../dto/opening-position.dto';
 import { COLOR_GREEN, COLOR_RED } from '../constants/constants';
 import { TradingHistoryDto } from '../dto/trading-history.dto';
+import moment from 'moment-timezone';
+import { ClosedPositionDto } from '../dto/closed-position.dto';
+import { ActionPositionEnum } from '../enums/action-position.enum';
 
 
 @Injectable()
 export class GenerateMessageService {
 
 
-  generateFlexMessage(data: TradingViewReqDto): FlexContainer {
+  generateAlertSignalFlexMsg(data: TradingViewReqDto): FlexContainer {
     const coin = data.symbol.replace('USDT', '');
     const imageUrl = symbolImage[coin];
-    const msg = {
+    return {
       'type': 'bubble',
       'body': {
         'type': 'box',
@@ -103,8 +106,6 @@ export class GenerateMessageService {
         'paddingAll': '0px',
       },
     } as FlexContainer;
-
-    return msg;
   }
 
   generateCurrentOpeningPositionMessage(data: OpeningPositionDto): string {
@@ -313,5 +314,307 @@ export class GenerateMessageService {
     });
 
     return flex;
+  }
+
+  async generateFlexMsgTakePFAndClosePS(currentPosition: OpeningPositionDto): Promise<FlexContainer> {
+    const carousel = {
+      'type': 'carousel',
+      'contents': [],
+    } as FlexContainer;
+
+    const updateTime = moment(currentPosition.updateTime).format('DD/MM HH:mm:ss');
+    for (let i = 0; i < 12; i++) {
+      const position = currentPosition.position[i];
+      const colorSide = position.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
+      const colorPercentage = position.profitLossPercentage > 0 ? COLOR_GREEN : COLOR_RED;
+      const coin = position.symbol.replace('USDT', '');
+      const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+      const flexBubble = {
+        'type': 'bubble',
+        'size': 'kilo',
+        'body': {
+          'type': 'box',
+          'layout': 'vertical',
+          'contents': [
+            {
+              'type': 'box',
+              'layout': 'vertical',
+              'contents': [
+                {
+                  'type': 'box',
+                  'layout': 'horizontal',
+                  'paddingAll': '10px',
+                  'contents': [
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'margin': 'sm',
+                      'contents': [
+                        {
+                          'type': 'image',
+                          'url': imageUrl,
+                          'align': 'start',
+                          'gravity': 'top',
+                          'size': 'xxs',
+                          'aspectMode': 'cover',
+                        },
+                        {
+                          'type': 'text',
+                          'text': position.symbol,
+                          'weight': 'bold',
+                          'color': '#000000FF',
+                          'flex': 5,
+                          'align': 'start',
+                          'gravity': 'top',
+                          'margin': 'xs',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': `P/L: ${position.profitLossPercentage}%`,
+                          'weight': 'bold',
+                          'color': colorPercentage,
+                          'flex': 1,
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  'type': 'separator',
+                  'margin': 'sm',
+                  'color': '#A39595FF',
+                },
+                {
+                  'type': 'box',
+                  'layout': 'vertical',
+                  'paddingAll': '10px',
+                  'contents': [
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'Entry Price:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.entryPrice}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'Mark Price:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.markPrice}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'Side:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.positionSide}`,
+                          'size': 'sm',
+                          'color': colorSide,
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'P/L(USDT):',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': '0',
+                          'size': 'sm',
+                          'align': 'end',
+                          'color': colorPercentage,
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'P/L(%):',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.profitLossPercentage}%`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'color': colorPercentage,
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'Duration:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.duration}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'Update Time:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${updateTime}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  'type': 'separator',
+                  'margin': 'sm',
+                  'color': '#A39595FF',
+                },
+                {
+                  'type': 'box',
+                  'layout': 'horizontal',
+                  'paddingTop': '15px',
+                  'contents': [
+                    {
+                      'type': 'button',
+                      'action': {
+                        'type': 'postback',
+                        'label': 'Take P/F',
+                        'text': `กำลังปิด Take Profit ${position.symbol}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":"${position.transactionId}","markPrice":"${position.markPrice}"}`,
+                      },
+                      'height': 'sm',
+                      'style': 'primary',
+                      'gravity': 'center',
+                    },
+                    {
+                      'type': 'separator',
+                      'margin': 'lg',
+                      'color': '#FFFFFF00',
+                    },
+                    {
+                      'type': 'button',
+                      'action': {
+                        'type': 'postback',
+                        'label': 'Close Pos',
+                        'text': `กำลังปิด Position ${position.symbol}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":"${position.transactionId}","markPrice":"${position.markPrice}"}`,
+                      },
+                      'color': '#9E0000FF',
+                      'margin': 'none',
+                      'height': 'sm',
+                      'style': 'primary',
+                      'gravity': 'center',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        'styles': {
+          'body': {
+            'backgroundColor': '#FAFAFAFF',
+          },
+        },
+      } as FlexBubble;
+      if (carousel.type !== 'bubble') {
+        carousel.contents.push(flexBubble);
+      }
+    }
+    return carousel;
+  }
+
+  generateClosedPositionMsg(req: ClosedPositionDto): string {
+    const { symbol, closedPrice, closedTime, resultStatus, pl, plPercentage, duration, positionSide } = req;
+    let body = `ปิด Position ${positionSide} เหรียญ ${symbol} แล้ว`;
+    body += `\nราคา: ${closedPrice} ณ วันที่: ${closedTime}`;
+    body += `\nP/L(USDT): ${pl}\nP/L(%): ${plPercentage}%`;
+    body += `\nผลลัพธ์: ${resultStatus}\nใช้เวลาเทรด: ${duration}`;
+    return body;
   }
 }

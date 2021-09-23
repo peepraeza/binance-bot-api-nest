@@ -25,11 +25,11 @@ export class WebhookController {
   async tradingViewWebhook(
     @Body() dto: TradingViewReqDto,
   ): Promise<void> {
-    return await this.binanceBotService.buySellPosition(dto);
+    return await this.binanceBotService.actionPosition(dto);
   }
 
   @Post('/line')
-  async lineWebhook(@Body() { events }: WebhookRequestBody): Promise<any> {
+  async lineWebhook(@Body() { events }: WebhookRequestBody): Promise<void> {
     return this.lineBotService.handleReplyMessage(events);
   }
 }
