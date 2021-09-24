@@ -13,4 +13,5 @@ export type KeyConfig =
   'LINE_CHANNEL_SECRET' |
   'LINE_CHANNEL_ACCESS_TOKEN' |
   'LINE_GROUP_ID' |
-  'LINE_USER_ID';
+  'LINE_USER_ID' |
+  'ACTION_RANGE_TIME';

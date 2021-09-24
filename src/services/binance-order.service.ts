@@ -19,6 +19,8 @@ import { plainToClass } from 'class-transformer';
 import { YYYY_MM_DD } from '../constants/constants';
 import { SendMessageService } from './send-message.service';
 import { GenerateMessageService } from './generate-message.service';
+import { BuyPositionDto } from '../dto/buy-position.dto';
+import { SwapPositionDto } from '../dto/swap-position.dto';
 
 @Injectable()
 export class BinanceOrderService {
@@ -74,7 +76,7 @@ export class BinanceOrderService {
   }
 
   async closeCurrentPosition(currentPosition: Transaction, closePrice?: number): Promise<ClosedPositionDto> {
-    console.log('closeCurrentPosition');
+    console.log('Call function closeCurrentPosition');
     // close binance position
     const { symbol, quantity, buyPrice, positionSide, buyDate, transactionId } = currentPosition;
     // if (positionSide == PositionSideEnum.BUY) {
@@ -103,13 +105,16 @@ export class BinanceOrderService {
     profitLossHistory.resultStatus = resultStatus;
     profitLossHistory.sellDate = todayDate;
     await this.profitLossHistoryRepository.save(profitLossHistory);
+    console.log('Close position success and save transaction history to database.');
 
     // return data from binance
     return {
       symbol: symbol,
       positionSide: positionSide,
+      buyPrice: buyPrice,
       closedPrice: closePrice,
       closedTime: todayDate,
+      quantity: quantity,
       plPercentage: profitPercent,
       pl: profit,
       resultStatus: resultStatus,
@@ -117,8 +122,9 @@ export class BinanceOrderService {
     };
   }
 
-  async buyNewPosition(symbol: string, side: string, openPrice?: number): Promise<object> {
+  async buyNewPosition(symbol: string, side: string, openPrice?: number): Promise<BuyPositionDto> {
     // open binance position
+    console.log('Call function buy new position');
     const leverage = await this.appConfigRepository.getValueNumber('binance.future_leverage');
     // const resp = await binance.futures.leverage(symbol, leverage);
     // await binance.futures.marginType(symbol, 'ISOLATED');
@@ -147,9 +153,15 @@ export class BinanceOrderService {
     transaction.buyPrice = openPrice;
     transaction.updatedAt = todayDate;
     await this.transactionRepository.save(transaction);
-
+    console.log('BuyNewPosition Success and save transaction to database');
     // return data from binance
-    return { openPrice: openPrice };
+    return {
+      symbol: symbol,
+      positionSide: side,
+      quantity: quantity,
+      buyPrice: openPrice,
+      buyDate: todayDate,
+    };
   }
 
   async calculateQuantity(symbol: string): Promise<number> {
@@ -270,6 +282,20 @@ export class BinanceOrderService {
     console.log('closePositionByTransactionId');
     const currentPosition = await this.transactionRepository.findOne(transactionId);
     return await this.closeCurrentPosition(currentPosition, closePrice);
+  }
+
+  async swapPositionByTransactionId(transactionId: number, closePrice?: number): Promise<SwapPositionDto> {
+    console.log('Swap Position: Call function to close current position and buy new one.');
+    const currentPosition = await this.transactionRepository.findOne(transactionId);
+    const { symbol, positionSide } = currentPosition;
+    const closedPosition = await this.closeCurrentPosition(currentPosition, closePrice);
+    const side = positionSide == 'LONG' ? SideEnum.SELL : SideEnum.BUY;
+    const buyNewPosition = await this.buyNewPosition(symbol, side, closePrice);
+    return {
+      symbol,
+      closedPosition: closedPosition,
+      buyPosition: buyNewPosition,
+    };
   }
 
   calProfitLossPercentage(entryPrice: number, currentPrice: number, positionSide?: string): number {

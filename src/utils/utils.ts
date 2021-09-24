@@ -24,3 +24,11 @@ export function duration(fromDate: Date, toDate: Date): string {
   text += duration.minutes ? `${duration.minutes} นาที ` : '';
   return text.trim();
 }
+
+export function validateTimeRange(fromDate: Date, range: number): boolean {
+  const now = moment(new Date()); //todays date
+  const end = moment(fromDate); // another date
+  const duration = moment.duration(now.diff(end));
+  const minutes = duration.asMinutes();
+  return minutes <= range;
+}

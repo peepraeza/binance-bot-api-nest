@@ -9,6 +9,10 @@ import { TradingHistoryDto } from '../dto/trading-history.dto';
 import moment from 'moment-timezone';
 import { ClosedPositionDto } from '../dto/closed-position.dto';
 import { ActionPositionEnum } from '../enums/action-position.enum';
+import { ActionPositionDto } from '../dto/action-position.dto';
+import { QuickReply } from '@line/bot-sdk';
+import { SwapPositionDto } from '../dto/swap-position.dto';
+import { BuyPositionDto } from '../dto/buy-position.dto';
 
 
 @Injectable()
@@ -316,14 +320,14 @@ export class GenerateMessageService {
     return flex;
   }
 
-  async generateFlexMsgTakePFAndClosePS(currentPosition: OpeningPositionDto): Promise<FlexContainer> {
+  generateFlexMsgActionPosition(currentPosition: OpeningPositionDto): FlexContainer {
     const carousel = {
       'type': 'carousel',
       'contents': [],
     } as FlexContainer;
 
     const updateTime = moment(currentPosition.updateTime).format('DD/MM HH:mm:ss');
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < currentPosition.position.length; i++) {
       const position = currentPosition.position[i];
       const colorSide = position.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
       const colorPercentage = position.profitLossPercentage > 0 ? COLOR_GREEN : COLOR_RED;
@@ -564,8 +568,8 @@ export class GenerateMessageService {
                       'action': {
                         'type': 'postback',
                         'label': 'Take P/F',
-                        'text': `กำลังปิด Take Profit ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":"${position.transactionId}","markPrice":"${position.markPrice}"}`,
+                        'text': `#Take Profit ${position.symbol}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
                       },
                       'height': 'sm',
                       'style': 'primary',
@@ -580,9 +584,30 @@ export class GenerateMessageService {
                       'type': 'button',
                       'action': {
                         'type': 'postback',
-                        'label': 'Close Pos',
-                        'text': `กำลังปิด Position ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":"${position.transactionId}","markPrice":"${position.markPrice}"}`,
+                        'label': 'Swap Pos',
+                        'text': `#Swap Position ${position.symbol}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.SWAP_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
+                      },
+                      'color': '#f2af2b',
+                      'margin': 'none',
+                      'height': 'sm',
+                      'style': 'primary',
+                      'gravity': 'center',
+                    },
+                  ],
+                },
+                {
+                  'type': 'box',
+                  'layout': 'horizontal',
+                  'paddingTop': '10px',
+                  'contents': [
+                    {
+                      'type': 'button',
+                      'action': {
+                        'type': 'postback',
+                        'label': 'Close Position',
+                        'text': `#Close Position ${position.symbol}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
                       },
                       'color': '#9E0000FF',
                       'margin': 'none',
@@ -609,6 +634,502 @@ export class GenerateMessageService {
     return carousel;
   }
 
+  generateFlexMsgClosedPosition(closedPosition: ClosedPositionDto): FlexContainer {
+    const resultStatusMapping = { 'W': 'WIN', 'L': 'LOSS' };
+    const closedTime = moment(closedPosition.closedTime).format('DD/MM HH:mm:ss');
+    const colorSide = closedPosition.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
+    const colorPercentage = closedPosition.plPercentage > 0 ? COLOR_GREEN : COLOR_RED;
+    const coin = closedPosition.symbol.replace('USDT', '');
+    const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+    return {
+      'type': 'bubble',
+      'size': 'kilo',
+      'body': {
+        'type': 'box',
+        'layout': 'vertical',
+        'contents': [
+          {
+            'type': 'box',
+            'layout': 'vertical',
+            'contents': [
+              {
+                'type': 'box',
+                'layout': 'horizontal',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'margin': 'sm',
+                    'contents': [
+                      {
+                        'type': 'image',
+                        'url': imageUrl,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'size': 'xxs',
+                        'aspectMode': 'cover',
+                      },
+                      {
+                        'type': 'text',
+                        'text': closedPosition.symbol,
+                        'weight': 'bold',
+                        'color': '#000000FF',
+                        'flex': 5,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'margin': 'xs',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': `CLOSED`,
+                        'weight': 'bold',
+                        'color': '#9E0000FF',
+                        'flex': 1,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'type': 'separator',
+                'margin': 'sm',
+                'color': '#A39595FF',
+              },
+              {
+                'type': 'box',
+                'layout': 'vertical',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Entry Price:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.buyPrice}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Closed Price:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.closedPrice}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Status:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `CLOSED`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Side:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.positionSide}`,
+                        'size': 'sm',
+                        'color': colorSide,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Quantity:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.quantity}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'P/L(USDT):',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.pl} USDT`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'P/L(%):',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.plPercentage}%`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Result:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${resultStatusMapping[closedPosition.resultStatus]}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Duration:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.duration}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Closed Time:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedTime}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      'styles': {
+        'body': {
+          'backgroundColor': '#FAFAFAFF',
+        },
+      },
+    } as FlexContainer;
+  }
+
+  generateFlexMsgBuyPosition(buyPosition: BuyPositionDto): FlexContainer {
+    const buyTime = moment(buyPosition.buyDate).format('DD/MM HH:mm:ss');
+    const colorSide = buyPosition.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
+    const coin = buyPosition.symbol.replace('USDT', '');
+    const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+    return {
+      'type': 'bubble',
+      'size': 'kilo',
+      'body': {
+        'type': 'box',
+        'layout': 'vertical',
+        'contents': [
+          {
+            'type': 'box',
+            'layout': 'vertical',
+            'contents': [
+              {
+                'type': 'box',
+                'layout': 'horizontal',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'margin': 'sm',
+                    'contents': [
+                      {
+                        'type': 'image',
+                        'url': imageUrl,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'size': 'xxs',
+                        'aspectMode': 'cover',
+                      },
+                      {
+                        'type': 'text',
+                        'text': buyPosition.symbol,
+                        'weight': 'bold',
+                        'color': '#000000FF',
+                        'flex': 5,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'margin': 'xs',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': `OPENED`,
+                        'weight': 'bold',
+                        'color': '#47b557',
+                        'flex': 1,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'type': 'separator',
+                'margin': 'sm',
+                'color': '#A39595FF',
+              },
+              {
+                'type': 'box',
+                'layout': 'vertical',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Entry Price:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${buyPosition.buyPrice}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Status:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `BUY POSITION`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Side:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${buyPosition.positionSide}`,
+                        'size': 'sm',
+                        'color': colorSide,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Quantity:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${buyPosition.quantity}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Updated Time:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${buyTime}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      'styles': {
+        'body': {
+          'backgroundColor': '#FAFAFAFF',
+        },
+      },
+    } as FlexContainer;
+  }
+
   generateClosedPositionMsg(req: ClosedPositionDto): string {
     const { symbol, closedPrice, closedTime, resultStatus, pl, plPercentage, duration, positionSide } = req;
     let body = `ปิด Position ${positionSide} เหรียญ ${symbol} แล้ว`;
@@ -616,5 +1137,37 @@ export class GenerateMessageService {
     body += `\nP/L(USDT): ${pl}\nP/L(%): ${plPercentage}%`;
     body += `\nผลลัพธ์: ${resultStatus}\nใช้เวลาเทรด: ${duration}`;
     return body;
+  }
+
+  generateMsgAskToConfirm(req: ActionPositionDto): string {
+    const { symbol, actionStatus } = req;
+    const actionMapping = { 'cp': 'Close Position', 'tp': 'Take Profit', 'sp': 'Swap Position' };
+    return `ต้องการจะ ${actionMapping[actionStatus]} เหรียญ ${symbol} ใช่หรือไม่?`;
+  }
+
+  generateQuickReplyAskConfirmTransaction(req: ActionPositionDto): QuickReply {
+    const { actionStatus, transactionId, symbol, markPrice } = req;
+    return {
+      'items': [
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ใช่',
+            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${new Date()}"}`,
+            'displayText': 'ใช่',
+          },
+        },
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ไม่ใช่',
+            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${false},"actionTime":"${new Date()}"}`,
+            'displayText': 'ไม่ใช่',
+          },
+        },
+      ],
+    } as QuickReply;
   }
 }
