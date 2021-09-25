@@ -29,11 +29,23 @@ export class Transaction {
   @Column('varchar', { name: 'position_side', length: 100 })
   positionSide: PositionSideEnum;
 
+  @Column('bigint', { name: 'buy_order_id', transformer: new ColumnNumericTransformer(), default: 1 })
+  buyOrderId: number;
+
+  @Column('double', { name: 'buy_cost', transformer: new ColumnNumericTransformer(), default: 0 })
+  buyCost: number;
+
   @Column('double', { name: 'buy_price', transformer: new ColumnNumericTransformer() })
   buyPrice: number;
 
   @Column({ type: 'datetime', name: 'buy_date' })
   buyDate: Date | string;
+
+  @Column('bigint', { name: 'sell_order_id', transformer: new ColumnNumericTransformer(), nullable: true })
+  sellOrderId: number;
+
+  @Column('double', { name: 'sell_cost', transformer: new ColumnNumericTransformer(), nullable: true })
+  sellCost: number;
 
   @Column('double', { name: 'sell_price', transformer: new ColumnNumericTransformer(), nullable: true })
   sellPrice: number;

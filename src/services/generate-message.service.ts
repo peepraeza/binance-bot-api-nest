@@ -134,8 +134,9 @@ export class GenerateMessageService {
 
   generateFlexMsgCurrentPosition(req: OpeningPositionDto): FlexContainer {
     const { position, updateTime } = req;
-    const average = position.reduce((total, next) => total + next.profitLossPercentage, 0) / position.length;
+    let average = position.reduce((total, next) => total + next.profitLossPercentage, 0) / position.length;
     const winPosition = position.filter(position => position.profitLossPercentage > 0);
+    average = average > 0 ? average : 0;
     const colorAvg = average > 0 ? COLOR_GREEN : COLOR_RED;
 
     const flex = {
@@ -144,22 +145,6 @@ export class GenerateMessageService {
         {
           'type': 'bubble',
           'size': 'mega',
-          'header': {
-            'type': 'box',
-            'layout': 'horizontal',
-            'backgroundColor': '#00bce4',
-            'contents': [
-              {
-                'type': 'text',
-                'text': 'Current Position',
-                'weight': 'bold',
-                'size': 'lg',
-                'gravity': 'center',
-                'align': 'center',
-                'color': '#FFFFFF',
-              },
-            ],
-          },
           'body': {
             'type': 'box',
             'layout': 'vertical',
@@ -254,9 +239,6 @@ export class GenerateMessageService {
             ],
           },
           'styles': {
-            'header': {
-              'backgroundColor': '#6486E3',
-            },
             'body': {
               'backgroundColor': '#ffffff',
             },
@@ -634,6 +616,310 @@ export class GenerateMessageService {
     return carousel;
   }
 
+  generateFlexMsgTakeProfit(closedPosition: ClosedPositionDto): FlexContainer {
+    const resultStatusMapping = { 'W': 'WIN', 'L': 'LOSS' };
+    const closedTime = moment(closedPosition.closedTime).format('DD/MM HH:mm:ss');
+    const colorSide = closedPosition.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
+    const colorPercentage = closedPosition.plPercentage > 0 ? COLOR_GREEN : COLOR_RED;
+    const coin = closedPosition.symbol.replace('USDT', '');
+    const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+    return {
+      'type': 'bubble',
+      'size': 'kilo',
+      'body': {
+        'type': 'box',
+        'layout': 'vertical',
+        'contents': [
+          {
+            'type': 'box',
+            'layout': 'vertical',
+            'contents': [
+              {
+                'type': 'box',
+                'layout': 'horizontal',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'margin': 'sm',
+                    'contents': [
+                      {
+                        'type': 'image',
+                        'url': imageUrl,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'size': 'xxs',
+                        'aspectMode': 'cover',
+                      },
+                      {
+                        'type': 'text',
+                        'text': closedPosition.symbol,
+                        'weight': 'bold',
+                        'color': '#000000FF',
+                        'flex': 5,
+                        'align': 'start',
+                        'gravity': 'top',
+                        'margin': 'xs',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': `TAKE P/F`,
+                        'weight': 'bold',
+                        'color': '#47b557',
+                        'flex': 1,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'type': 'separator',
+                'margin': 'sm',
+                'color': '#A39595FF',
+              },
+              {
+                'type': 'box',
+                'layout': 'vertical',
+                'paddingAll': '10px',
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Entry Price:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.buyPrice}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'TP Price:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.closedPrice}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Status:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `TAKE P/F`,
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Side:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.positionSide}`,
+                        'size': 'sm',
+                        'color': colorSide,
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Quantity:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.quantity}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'P/L(USDT):',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.pl} USDT`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'P/L(%):',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.plPercentage}%`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Result:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${resultStatusMapping[closedPosition.resultStatus]}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'color': colorPercentage,
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Duration:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.duration}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Closed Time:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedTime}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      'styles': {
+        'body': {
+          'backgroundColor': '#FAFAFAFF',
+        },
+      },
+    } as FlexContainer;
+  }
+
   generateFlexMsgClosedPosition(closedPosition: ClosedPositionDto): FlexContainer {
     const resultStatusMapping = { 'W': 'WIN', 'L': 'LOSS' };
     const closedTime = moment(closedPosition.closedTime).format('DD/MM HH:mm:ss');
@@ -766,6 +1052,7 @@ export class GenerateMessageService {
                       {
                         'type': 'text',
                         'text': `CLOSED`,
+                        'weight': 'bold',
                         'size': 'sm',
                         'align': 'end',
                         'gravity': 'center',
@@ -938,6 +1225,7 @@ export class GenerateMessageService {
   }
 
   generateFlexMsgBuyPosition(buyPosition: BuyPositionDto): FlexContainer {
+    console.log('call function generateFlexMsgBuyPosition');
     const buyTime = moment(buyPosition.buyDate).format('DD/MM HH:mm:ss');
     const colorSide = buyPosition.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
     const coin = buyPosition.symbol.replace('USDT', '');
@@ -1045,7 +1333,8 @@ export class GenerateMessageService {
                       },
                       {
                         'type': 'text',
-                        'text': `BUY POSITION`,
+                        'text': `OPENED`,
+                        'weight': 'bold',
                         'size': 'sm',
                         'align': 'end',
                         'gravity': 'center',
@@ -1128,15 +1417,6 @@ export class GenerateMessageService {
         },
       },
     } as FlexContainer;
-  }
-
-  generateClosedPositionMsg(req: ClosedPositionDto): string {
-    const { symbol, closedPrice, closedTime, resultStatus, pl, plPercentage, duration, positionSide } = req;
-    let body = `ปิด Position ${positionSide} เหรียญ ${symbol} แล้ว`;
-    body += `\nราคา: ${closedPrice} ณ วันที่: ${closedTime}`;
-    body += `\nP/L(USDT): ${pl}\nP/L(%): ${plPercentage}%`;
-    body += `\nผลลัพธ์: ${resultStatus}\nใช้เวลาเทรด: ${duration}`;
-    return body;
   }
 
   generateMsgAskToConfirm(req: ActionPositionDto): string {

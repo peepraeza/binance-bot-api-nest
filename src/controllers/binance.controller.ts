@@ -17,19 +17,19 @@ export class BinanceController {
 
   @Get('/balance/future')
   async getFutureBalance(): Promise<object> {
-    return this.binanceOrderService.getFutureBalance();
+    return await this.binanceOrderService.getFutureBalance();
   }
 
-  @Get('/price/:symbol')
-  async getMarkPrice(
-    @Param('symbol') symbol: string,
-  ): Promise<number> {
-    return this.binanceOrderService.calculateQuantity(symbol);
-  }
+  // @Get('/price/:symbol')
+  // async getMarkPrice(
+  //   @Param('symbol') symbol: string,
+  // ): Promise<number> {
+  //   return this.binanceOrderService.calculateQuantity(symbol);
+  // }
 
   @Get('/current-position')
   async getCurrentPosition(): Promise<object> {
-    return this.binanceOrderService.getTestCurrentPosition();
+    return this.binanceOrderService.getCurrentPosition();
   }
 
   // @Get('/test')

@@ -3,8 +3,14 @@ import { MessageEvent, PostbackEvent } from '@line/bot-sdk';
 import {
   CLOSE_POSITION,
   CURRENT_POSITION,
-  CURRENT_POSITION_TEST, DEFAULT_MSG,
+  CURRENT_POSITION_TEST,
+  DEFAULT_MSG,
   FUTURE_BALANCE,
+  MSG_CANCEL_ORDER,
+  MSG_ERR_CANNOT_TAKE_PROFIT,
+  MSG_ERR_TOKEN_EXPIRED,
+  MSG_NO_DATA,
+  MSG_NO_POSITION_OPENING,
   TRADING_SUMMARY,
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
@@ -54,28 +60,40 @@ export class LineBotService {
     let replyText = DEFAULT_MSG;
     if (message.type == 'text') {
       if (message.text == CLOSE_POSITION) {
-        const currentPosition = await this.binanceOrderService.getTestCurrentPosition();
-        const flex = await this.generateMessageService.generateFlexMsgActionPosition(currentPosition);
-        return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Take Profit Or Close Position', flex);
-
+        const currentPosition = await this.binanceOrderService.getCurrentPosition();
+        if (currentPosition.position.length > 0) {
+          const flexTemplateMsgActionPositon = await this.generateMessageService.generateFlexMsgActionPosition(currentPosition);
+          const flexObject = this.sendMessageService.generateFlexMessageObject('Action Position', flexTemplateMsgActionPositon);
+          return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexObject]);
+        } else {
+          replyText = MSG_NO_POSITION_OPENING;
+        }
       } else if (message.text == FUTURE_BALANCE) {
         const resp = await this.binanceOrderService.getFutureBalance();
         replyText = JSON.stringify(resp);
 
       } else if (message.text == CURRENT_POSITION) {
-        // const resp = await this.binanceOrderService.getCurrentPosition();
-        // replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
-        const resp = await this.binanceOrderService.getTestCurrentPosition();
-        const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(resp);
-        return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Current Position', flex);
-
+        const resp = await this.binanceOrderService.getCurrentPosition();
+        if (resp.position.length > 0) {
+          const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(resp);
+          return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Current Position', flex);
+        } else {
+          replyText = MSG_NO_POSITION_OPENING;
+        }
       } else if (message.text == CURRENT_POSITION_TEST) {
-        const resp = await this.binanceOrderService.getTestCurrentPosition();
-        replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
-
+        const resp = await this.binanceOrderService.getCurrentPosition();
+        if (resp.position.length > 0) {
+          replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
+        } else {
+          replyText = MSG_NO_POSITION_OPENING;
+        }
       } else if (message.text == TRADING_SUMMARY) {
         const resp = await this.binanceOrderService.getTradingHistory();
-        replyText = this.generateMessageService.generateSummaryTradingHistory(resp);
+        if (resp.length > 0) {
+          replyText = this.generateMessageService.generateSummaryTradingHistory(resp);
+        } else {
+          replyText = MSG_NO_DATA;
+        }
       } else if (message.text.includes('#')) {
         return;
       }
@@ -85,49 +103,71 @@ export class LineBotService {
 
   async handlePostBackMessage(event: PostbackEvent): Promise<any> {
     const { replyToken, postback } = event;
-    const closePositionDto = plainToClass(ActionPositionDto, JSON.parse(postback.data));
-    const { actionStatus, transactionId, markPrice, isConfirmed, actionTime } = closePositionDto;
+    const actionPosition = plainToClass(ActionPositionDto, JSON.parse(postback.data));
+    const { actionStatus, transactionId, isConfirmed, actionTime } = actionPosition;
     let replyText;
     if (!validateTimeRange(new Date(actionTime), +this.actionRangeTime)) {
-      replyText = 'ไม่สามารถดำเนินการได้ เนื่องจาก token หมดอายุแล้ว กรุณาทำรายการใหม่อีกครั้ง';
+      replyText = MSG_ERR_TOKEN_EXPIRED;
       return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
     }
 
     if (actionStatus == ActionPositionEnum.CLOSE_POSITION) {
       if (!isConfirmed && isConfirmed != false) {
-        replyText = this.generateMessageService.generateMsgAskToConfirm(closePositionDto);
-        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(closePositionDto);
-        return await this.sendMessageService.sendReplyMessage(replyToken, replyText, quickReply);
+        replyText = this.generateMessageService.generateMsgAskToConfirm(actionPosition);
+        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
       } else if (isConfirmed != null && isConfirmed === true) {
         console.log('confirm transaction to close position!');
-        const resp = await this.binanceOrderService.closePositionByTransactionId(transactionId, markPrice);
+        const resp = await this.binanceOrderService.closePositionByTransactionId(transactionId);
         const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(resp);
         const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition);
         return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexClosedObject]);
 
       } else if (isConfirmed != null && isConfirmed === false) {
         console.log('confirm transaction to not close position!');
-        replyText = 'ยกเลิกคำสั่ง close position แล้ว';
+        replyText = MSG_CANCEL_ORDER;
 
       } else {
         console.log('nothing!!');
         replyText = DEFAULT_MSG;
       }
-
     } else if (actionStatus == ActionPositionEnum.TAKE_PROFIT) {
       // take profit function
+      if (!isConfirmed && isConfirmed != false) {
+        console.log('Take Profit: Ask to confirm to action transaction');
+        replyText = this.generateMessageService.generateMsgAskToConfirm(actionPosition);
+        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
 
+      } else if (isConfirmed != null && isConfirmed === true) {
+        console.log('Take Profit: Take Profit Confirmed');
+        const resp = await this.binanceOrderService.takeProfitByTransactionId(transactionId);
+        if (resp) {
+          const flexTemplateTakeProfit = this.generateMessageService.generateFlexMsgTakeProfit(resp);
+          const flexTakeProfitObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateTakeProfit);
+          return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexTakeProfitObject]);
+        } else {
+          replyText = MSG_ERR_CANNOT_TAKE_PROFIT;
+        }
+      } else if (isConfirmed != null && isConfirmed === false) {
+        console.log('Swap Position: Swap Position No Confirmed');
+        replyText = MSG_CANCEL_ORDER;
+
+      } else {
+        console.log('nothing!!');
+        replyText = DEFAULT_MSG;
+      }
     } else if (actionStatus == ActionPositionEnum.SWAP_POSITION) {
       // swap position is sell current position and buy opposite position immediately
       if (!isConfirmed && isConfirmed != false) {
         console.log('Swap Position: Ask to confirm to action transaction');
-        replyText = this.generateMessageService.generateMsgAskToConfirm(closePositionDto);
-        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(closePositionDto);
-        return await this.sendMessageService.sendReplyMessage(replyToken, replyText, quickReply);
+        replyText = this.generateMessageService.generateMsgAskToConfirm(actionPosition);
+        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
 
       } else if (isConfirmed != null && isConfirmed === true) {
         console.log('Swap Position: Swap Position Confirmed');
-        const resp = await this.binanceOrderService.swapPositionByTransactionId(transactionId, markPrice);
+        const resp = await this.binanceOrderService.swapPositionByTransactionId(transactionId);
         const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(resp.closedPosition);
         const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
         const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(resp.buyPosition);
@@ -136,7 +176,7 @@ export class LineBotService {
 
       } else if (isConfirmed != null && isConfirmed === false) {
         console.log('Swap Position: Swap Position No Confirmed');
-        replyText = 'ยกเลิกคำสั่ง swap position แล้ว';
+        replyText = MSG_CANCEL_ORDER;
 
       } else {
         console.log('nothing!!');
@@ -148,5 +188,4 @@ export class LineBotService {
     console.log('send message complete transaction');
     return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
   }
-
 }
