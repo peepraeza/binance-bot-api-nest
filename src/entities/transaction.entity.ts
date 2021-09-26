@@ -1,8 +1,10 @@
-import { Column, Entity, OneToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ColumnNumericTransformer } from './transformer/column-numeric.transformer';
 import { PositionSideEnum } from '../enums/position-side.enum';
 import { ProfitLossHistory } from './profit-loss-history.entity';
+import { User } from './user.entity';
 
+@Index('transaction_user_user_id_fk', ['userId'], {})
 @Entity('transaction')
 export class Transaction {
 
@@ -13,6 +15,9 @@ export class Transaction {
     transformer: new ColumnNumericTransformer(),
   })
   transactionId: number;
+
+  @Column('bigint', { name: 'user_id', transformer: new ColumnNumericTransformer() })
+  userId: number;
 
   @Column('varchar', { name: 'symbol', length: 100 })
   symbol: string;
@@ -58,5 +63,16 @@ export class Transaction {
 
   @OneToOne(() => ProfitLossHistory, (profitLossHistory: ProfitLossHistory) => profitLossHistory.transaction)
   profitLossHistory: ProfitLossHistory;
+
+  @ManyToOne(
+    () => User,
+    user => user.transactions,
+    {
+      onDelete: 'RESTRICT',
+      onUpdate: 'RESTRICT',
+    },
+  )
+  @JoinColumn([{ name: 'user_id', referencedColumnName: 'userId' }])
+  user: User;
 
 }

@@ -45,6 +45,7 @@ export class LineBotService {
 
   async handleReplyMessage(events: any[]): Promise<void> {
     await events.forEach(event => {
+      console.log(event);
       if (event.type == EventTypeEnum.MESSAGE) {
         console.log('type message');
         this.handleTextMessage(event);
