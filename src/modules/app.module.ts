@@ -13,6 +13,9 @@ import { TransactionRepository } from '../repositories/transaction.repository';
 import { AppConfigRepository } from '../repositories/appconfig.repository';
 import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
 import { SendMessageService } from '../services/send-message.service';
+import { UserRepository } from '../repositories/user.repository';
+import { UserService } from '../services/user.service';
+import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping.repository';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -20,9 +23,9 @@ import { SendMessageService } from '../services/send-message.service';
   }), TypeOrmModule.forRootAsync({
     useClass: DbConfig,
   }),
-    TypeOrmModule.forFeature([TransactionRepository, AppConfigRepository, ProfitLossHistoryRepository])],
+    TypeOrmModule.forFeature([TransactionRepository, AppConfigRepository, ProfitLossHistoryRepository, UserRepository, UserSymbolMappingRepository])],
   controllers: [AppController, WebhookController, BinanceController],
-  providers: [AppService, BinanceOrderService, LineBotService, GenerateMessageService, SendMessageService],
+  providers: [AppService, BinanceOrderService, LineBotService, GenerateMessageService, SendMessageService, UserService],
 
 })
 export class AppModule {

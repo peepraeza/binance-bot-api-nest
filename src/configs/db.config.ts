@@ -13,7 +13,7 @@ export class DbConfig implements TypeOrmOptionsFactory {
       username: getConfig('DB_USERNAME'),
       password: getConfig('DB_PASS'),
       database: getConfig('DB_NAME'),
-      synchronize: true,
+      synchronize: false,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     };
   }

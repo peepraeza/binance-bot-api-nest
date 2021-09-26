@@ -24,6 +24,8 @@ import { BinanceOrderService } from './binance-order.service';
 import { SendMessageService } from './send-message.service';
 import { getConfig } from '../configs/config';
 import { validateTimeRange } from '../utils/utils';
+import { UserRepository } from '../repositories/user.repository';
+import { UserService } from './user.service';
 
 @Injectable()
 export class LineBotService {
@@ -36,24 +38,43 @@ export class LineBotService {
     private generateMessageService: GenerateMessageService,
     @Inject('SendMessageService')
     private sendMessageService: SendMessageService,
+    @Inject('UserService')
+    private userService: UserService,
     @InjectRepository(TransactionRepository)
     private transactionRepository: TransactionRepository,
+    @InjectRepository(UserRepository)
+    private userRepository: UserRepository,
   ) {
     this.sendMessageService.sendStartServerMessage();
     this.actionRangeTime = getConfig('ACTION_RANGE_TIME');
   }
 
   async handleReplyMessage(events: any[]): Promise<void> {
-    await events.forEach(event => {
-      console.log(event);
-      if (event.type == EventTypeEnum.MESSAGE) {
-        console.log('type message');
-        this.handleTextMessage(event);
-      } else if (event.type == EventTypeEnum.POSTBACK) {
-        console.log('type postback');
-        this.handlePostBackMessage(event);
+    for (const event of events) {
+      const lineUserId = event.source.userId;
+      const user = await this.userRepository.findUserByLineUserId(lineUserId);
+      if (!user) {
+        if (event.type == EventTypeEnum.MESSAGE) {
+          return await this.handleRegisterLineBot(event);
+        } else if (event.type == EventTypeEnum.POSTBACK) {
+          await this.handlePostBackRegister(event);
+        }
+      } else {
+        if (user.binanceData) {
+          if (event.type == EventTypeEnum.MESSAGE) {
+            console.log('type message');
+            await this.handleTextMessage(event);
+          } else if (event.type == EventTypeEnum.POSTBACK) {
+            console.log('type postback');
+            await this.handlePostBackMessage(event);
+          }
+        } else {
+          await this.handleFillBinanceData(event);
+        }
+
       }
-    });
+
+    }
   }
 
   async handleTextMessage(event: MessageEvent): Promise<any> {
@@ -189,4 +210,25 @@ export class LineBotService {
     console.log('send message complete transaction');
     return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
   }
+
+  async handleRegisterLineBot(event: MessageEvent): Promise<any> {
+    const { replyToken, source } = event;
+    const replyText = `คุณยังไม่ลงทะเบียน line bot crypto trading คลิกด้านล่างเพื่อลงทะเบียน`;
+    const quickReply = this.generateMessageService.generateQuickReplyRegisterLineUser(source.userId);
+    return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
+  }
+
+  async handlePostBackRegister(event: PostbackEvent): Promise<any> {
+    const { postback, replyToken } = event;
+    const jsonData = JSON.parse(postback.data);
+    await this.userService.createUser(jsonData['lineUserId']);
+    return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ลงทะเบียนเรียบร้อยแล้ว');
+  }
+
+  async handleFillBinanceData(event: MessageEvent): Promise<any> {
+    const { source, replyToken } = event;
+    const quickReploy = this.generateMessageService.generateQuickReplyRegisterURL(source.userId);
+    return await this.sendMessageService.sendReplyTextMessage(replyToken, 'กรอก binance Data', quickReploy);
+  }
 }
+

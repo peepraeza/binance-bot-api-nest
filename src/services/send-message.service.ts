@@ -48,7 +48,7 @@ export class SendMessageService {
     return await this.sendReplyMessageObject(replyToken, message);
   }
 
-  async sendPushTextMessage(replyToken: string, replyText: string, quickReply?: QuickReply): Promise<any> {
+  async sendPushTextMessage(userId: string, replyText: string, quickReply?: QuickReply): Promise<any> {
     const qpDefault = quickReplyJson['quickReply'] as QuickReply;
     let qp;
     if (quickReply === undefined) {
@@ -66,7 +66,7 @@ export class SendMessageService {
       },
     ] as Types.Message[];
 
-    return await this.sendReplyMessageObject(replyToken, message);
+    return await this.sendPushMessageObject(userId, message);
   }
 
   async sendReplyFlexMessage(replyToken: string, altText: string, flex: FlexContainer, quickReply?: QuickReply): Promise<any> {

@@ -15,11 +15,6 @@ export class WebhookController {
   ) {
   }
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
-
   @UseGuards(TradingViewGuard)
   @Post('/trading-view')
   async tradingViewWebhook(

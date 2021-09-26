@@ -22,6 +22,10 @@ import { BuyPositionDto } from '../dto/buy-position.dto';
 import { SwapPositionDto } from '../dto/swap-position.dto';
 import { OrderInfoDto } from '../dto/order-info.dto';
 import { getConfig } from '../configs/config';
+import { UserRepository } from '../repositories/user.repository';
+import { User } from '../entities/user.entity';
+import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping.repository';
+import { decrypt } from '../middlewares/cryptojs.middleware';
 
 @Injectable()
 export class BinanceOrderService {
@@ -40,6 +44,10 @@ export class BinanceOrderService {
     private profitLossHistoryRepository: ProfitLossHistoryRepository,
     @InjectRepository(AppConfigRepository)
     private appConfigRepository: AppConfigRepository,
+    @InjectRepository(UserRepository)
+    private userRepository: UserRepository,
+    @InjectRepository(UserSymbolMappingRepository)
+    private userSymbolMappingRepository: UserSymbolMappingRepository,
   ) {
     this.lineUserId = getConfig('LINE_USER_ID');
     this.lineGroupId = getConfig('LINE_GROUP_ID');
@@ -50,50 +58,65 @@ export class BinanceOrderService {
     console.log('from trading view');
     const { symbol, side } = reqDto;
     const positionSide = this.positionMapping[side.toUpperCase()];
+    // find user that select this coin
+    const coin = symbol.replace('USDT', '');
+    const userSelected = await this.userRepository.findUserByCoinSelected(coin);
+    if (userSelected.length == 0) {
+      console.log('no user select this coin');
+      return;
+    }
+    for (const user of userSelected) {
+      // validate signal has already opening
+      console.log(user.binanceData);
+      const key = decrypt(user.binanceData, user.lineUserId + '|' + 'pee');
+      console.log(key);
+      const currentPosition = await this.transactionRepository.findOpeningPositionBySymbolAndUser(symbol, user.userId);
+      if (user.isReadyToTrade) {
+        if (currentPosition) {
+          if (currentPosition.positionSide == positionSide) {
+            // send message : already opening
+            await this.sendMessageService.sendPushTextMessage(user.lineUserId, 'มี position นี้เปิดอยู่แล้ว');
+          } else {
+            // close current position and buy new position
+            const closePosition = await this.closeCurrentPosition(currentPosition);
+            const openPosition = await this.buyNewPosition(user.userId, symbol, side);
 
-    // validate signal has already opening
-    const currentPosition = await this.transactionRepository.findOpeningPositionBySymbolAndSide(symbol);
-    if (currentPosition) {
-      if (currentPosition.positionSide == positionSide) {
-        // send message : already opening
-        return await this.sendMessageService.sendPushTextMessage(this.lineUserId, 'มี position นี้เปิดอยู่แล้ว')
+            // send message : order already buy
+            const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(closePosition);
+            const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
+            const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(openPosition);
+            const flexBuyObject = this.sendMessageService.generateFlexMessageObject('Buy Position', flexTemplateBuyPosition);
+            await this.sendMessageService.sendPushMessageObject(user.lineUserId, [flexClosedObject, flexBuyObject]);
+          }
+        } else {
+          // buy new position save database
+          const openPosition = await this.buyNewPosition(user.userId, symbol, side);
+          const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(openPosition);
+          const flexBuyObject = this.sendMessageService.generateFlexMessageObject('Buy Position', flexTemplateBuyPosition);
+          await this.sendMessageService.sendPushMessageObject(user.lineUserId, [flexBuyObject]);
+          // send message : order already buy
+        }
       } else {
-        // close current position and buy new position
-        const closePosition = await this.closeCurrentPosition(currentPosition);
-        const openPosition = await this.buyNewPosition(symbol, side);
-
-        // send message : order already buy
-        const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(closePosition);
-        const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
-        const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(openPosition);
-        const flexBuyObject = this.sendMessageService.generateFlexMessageObject('Buy Position', flexTemplateBuyPosition);
-        return await this.sendMessageService.sendPushMessageObject(this.lineUserId, [flexClosedObject, flexBuyObject]);
+        const replyText = `มี signal เหรียญ ${reqDto.symbol} ที่คุณลงทะเบียนไว้ ให้ ${reqDto.side} แต่เหมือนว่าคุณยังไม่พร้อมเทรดนะ`;
+        await this.sendMessageService.sendPushTextMessage(user.lineUserId, replyText);
       }
-    } else {
-      // buy new position save database
-      const openPosition = await this.buyNewPosition(symbol, side);
-      const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(openPosition);
-      const flexBuyObject = this.sendMessageService.generateFlexMessageObject('Buy Position', flexTemplateBuyPosition);
-      return await this.sendMessageService.sendPushMessageObject(this.lineUserId, [flexBuyObject]);
-      // send message : order already buy
     }
   }
 
-  async buyNewPosition(symbol: string, side: string): Promise<BuyPositionDto> {
+  async buyNewPosition(userId: number, symbol: string, side: string): Promise<BuyPositionDto> {
     // open binance position
     try {
       console.log('Call function buy new position');
+      const coin = symbol.replace('USDT', '');
       const resp = await Promise.all([
-        this.appConfigRepository.getValueNumber('binance.limit_price'),
-        this.appConfigRepository.getValueNumber('binance.future_leverage'),
+        this.userSymbolMappingRepository.findSymbolInfoByUserIdAndSymbol(userId, coin),
         binance.futures.markPrice(symbol),
       ]);
 
-      // const resp = await binance.futures.leverage(symbol, leverage);
-      // await binance.futures.marginType(symbol, 'ISOLATED');
-      const limitPrice = resp[0];
-      const leverage = resp[1];
-      const priceObject = resp[2];
+      const symbolInfo = resp[0];
+      const limitPrice = symbolInfo.limitPrice;
+      const leverage = symbolInfo.leverage;
+      const priceObject = resp[1];
       const openPrice = priceObject['markPrice'];
       const quantity = this.calQuantity(symbol, limitPrice, leverage, openPrice);
       console.log('quantity: ' + quantity);
@@ -112,6 +135,7 @@ export class BinanceOrderService {
       transaction.positionSide = this.positionMapping[side];
       transaction.symbol = symbol;
       transaction.isTrading = true;
+      transaction.userId = userId;
       transaction.quantity = +orderInfo.origQty;
       transaction.buyOrderId = orderInfo.orderId;
       transaction.buyCost = +orderInfo.cumQuote;
@@ -276,14 +300,9 @@ export class BinanceOrderService {
   }
 
   async getFutureBalance(): Promise<object> {
-    // const balance = await binance.futures.balance();
-    const orderInfo = await binance.futures.orderStatus('BNBUSDT', { orderId: '35179042365' });
-    // const orderInfo = await binance.futures.marketBuy('BNBUSDT', 0.04);
-    // const orderInfo = await binance.futures.marketSell('BNBUSDT', 0.02, {
-    //   reduceOnly: true,
-    // });
-    console.log(orderInfo);
-    return orderInfo;
+    const balance = await binance.futures.balance();
+    console.log(balance);
+    return balance;
   }
 
   async getCurrentPosition(): Promise<OpeningPositionDto> {
@@ -340,7 +359,7 @@ export class BinanceOrderService {
     const { symbol, positionSide } = currentPosition;
     const closedPosition = await this.closeCurrentPosition(currentPosition);
     const side = positionSide == 'LONG' ? SideEnum.SELL : SideEnum.BUY;
-    const buyNewPosition = await this.buyNewPosition(symbol, side);
+    const buyNewPosition = await this.buyNewPosition(currentPosition.userId, symbol, side);
     return {
       symbol,
       closedPosition: closedPosition,

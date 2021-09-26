@@ -20,7 +20,7 @@ export class User {
   @Column('tinyint', { name: 'is_ready_to_trade', default: false })
   isReadyToTrade: boolean;
 
-  @Column('varchar', { name: 'binance_data', length: 255 })
+  @Column('varchar', { name: 'binance_data', length: 255, nullable: true })
   binanceData: string;
 
   @Column('datetime', { name: 'created_at', default: () => 'CURRENT_TIMESTAMP' })
@@ -34,13 +34,13 @@ export class User {
 
   @OneToMany(
     () => Transaction,
-    transaction => transaction.user
+    transaction => transaction.user,
   )
   transactions: Transaction[];
 
   @OneToMany(
     () => UserSymbolMapping,
-    userSymbolMapping => userSymbolMapping.user
+    userSymbolMapping => userSymbolMapping.user,
   )
   userSymbolMappings: UserSymbolMapping[];
 

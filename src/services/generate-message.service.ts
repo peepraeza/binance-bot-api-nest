@@ -1450,4 +1450,36 @@ export class GenerateMessageService {
       ],
     } as QuickReply;
   }
+
+  generateQuickReplyRegisterLineUser(lineUserId: string): QuickReply {
+    return {
+      'items': [
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ลงทะเบียน',
+            'data': `{"lineUserId":"${lineUserId}"}`,
+            'displayText': 'ลงทะเบียน',
+          },
+        },
+      ],
+    } as QuickReply;
+  }
+
+  generateQuickReplyRegisterURL(lineId: string): QuickReply {
+    return {
+      'items': [
+        {
+          'type': 'action',
+          'action': {
+            'type': 'uri',
+            'label': 'Google',
+            'uri': `https://52b4-49-228-150-211.ngrok.io?id=${lineId}`,
+          },
+        },
+      ],
+    } as QuickReply;
+  }
+
 }
