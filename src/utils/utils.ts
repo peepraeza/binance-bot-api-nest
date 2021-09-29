@@ -3,7 +3,7 @@ import { ASIA_BANGKOK, YYYY_MM_DD_HH_MM_SS } from '../constants/constants';
 import { plainToClass } from 'class-transformer';
 import { DateDurationDto } from '../dto/date-duration.dto';
 
-export function dateToString(date: Date, format = YYYY_MM_DD_HH_MM_SS) {
+export function dateToString(date: Date | string, format = YYYY_MM_DD_HH_MM_SS): string {
   return moment(date).tz(ASIA_BANGKOK).format(format);
 }
 
@@ -13,7 +13,7 @@ export function countDecimals(value: number) {
   return 0;
 }
 
-export function duration(fromDate: Date, toDate: Date): string {
+export function duration(fromDate: string, toDate: string): string {
   const durationData = moment.duration(moment(toDate).diff(moment(fromDate)));
   const duration = plainToClass(DateDurationDto, durationData['_data']);
   let text = '';
@@ -30,5 +30,6 @@ export function validateTimeRange(fromDate: Date, range: number): boolean {
   const end = moment(fromDate); // another date
   const duration = moment.duration(now.diff(end));
   const minutes = duration.asMinutes();
+  console.log(`validate time range is more than ${range}?: ${minutes}`)
   return minutes <= range;
 }

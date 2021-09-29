@@ -217,7 +217,7 @@ export class BinanceOrderService {
       const profitLossHistory = new ProfitLossHistory();
       const profit = this.calProfitLoss(buyCost, sellCost, positionSide);
       const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
-      const buyDuration = duration(new Date(buyDate), new Date());
+      const buyDuration = duration(dateToString(buyDate), dateToString(new Date()));
       const resultStatus = profitPercent > 0 ? 'W' : 'L';
       profitLossHistory.transactionId = transactionId;
       profitLossHistory.pl = profit;
@@ -319,7 +319,7 @@ export class BinanceOrderService {
     const profitLossHistory = new ProfitLossHistory();
     const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
     // const profitPercent = this.calProfitLoss(buyPrice, closePrice, positionSide);
-    const buyDuration = duration(new Date(buyDate), new Date());
+    const buyDuration = duration(dateToString(buyDate), dateToString(new Date()));
     const resultStatus = profitPercent > 0 ? 'W' : 'L';
     profitLossHistory.transactionId = transactionId;
     profitLossHistory.pl = profit;
@@ -380,7 +380,7 @@ export class BinanceOrderService {
       positions.entryPrice = entryPrice;
       positions.markPrice = currentPrice;
       positions.profitLossPercentage = this.calProfitLossPercentage(entryPrice, currentPrice, position.positionSide);
-      positions.duration = duration(new Date(position.buyDate), new Date(updatedAt));
+      positions.duration = duration(dateToString(position.buyDate), dateToString(updatedAt));
       openingPositionDataDto.push(positions);
     }
     return {
