@@ -10,7 +10,6 @@ import { GenerateMessageService } from '../services/generate-message.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DbConfig } from '../configs/db.config';
 import { TransactionRepository } from '../repositories/transaction.repository';
-import { AppConfigRepository } from '../repositories/appconfig.repository';
 import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
 import { SendMessageService } from '../services/send-message.service';
 import { UserRepository } from '../repositories/user.repository';
@@ -23,7 +22,7 @@ import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping
   }), TypeOrmModule.forRootAsync({
     useClass: DbConfig,
   }),
-    TypeOrmModule.forFeature([TransactionRepository, AppConfigRepository, ProfitLossHistoryRepository, UserRepository, UserSymbolMappingRepository])],
+    TypeOrmModule.forFeature([TransactionRepository, ProfitLossHistoryRepository, UserRepository, UserSymbolMappingRepository])],
   controllers: [AppController, WebhookController, BinanceController],
   providers: [AppService, BinanceOrderService, LineBotService, GenerateMessageService, SendMessageService, UserService],
 

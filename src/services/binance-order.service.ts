@@ -8,7 +8,6 @@ import { countDecimals, dateToString, duration } from '../utils/utils';
 import binance from '../configs/binance.config';
 import { SideEnum } from '../enums/side.enum';
 import * as minNotional from '../constant-json/minNotional.json';
-import { AppConfigRepository } from '../repositories/appconfig.repository';
 import { ProfitLossHistoryRepository } from '../repositories/profit-loss-history.repository';
 import { ProfitLossHistory } from '../entities/profit-loss-history.entity';
 import { ClosedPositionDto } from '../dto/closed-position.dto';
@@ -42,8 +41,6 @@ export class BinanceOrderService {
     private transactionRepository: TransactionRepository,
     @InjectRepository(ProfitLossHistoryRepository)
     private profitLossHistoryRepository: ProfitLossHistoryRepository,
-    @InjectRepository(AppConfigRepository)
-    private appConfigRepository: AppConfigRepository,
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
     @InjectRepository(UserSymbolMappingRepository)
