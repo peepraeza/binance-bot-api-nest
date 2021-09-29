@@ -303,6 +303,7 @@ export class GenerateMessageService {
   }
 
   generateFlexMsgActionPosition(currentPosition: OpeningPositionDto): FlexContainer {
+    console.log('call generateFlexMsgActionPosition');
     const carousel = {
       'type': 'carousel',
       'contents': [],
@@ -453,6 +454,27 @@ export class GenerateMessageService {
                       'contents': [
                         {
                           'type': 'text',
+                          'text': 'Quantity:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.quantity}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
                           'text': 'P/L(USDT):',
                           'weight': 'bold',
                           'size': 'sm',
@@ -461,7 +483,7 @@ export class GenerateMessageService {
                         },
                         {
                           'type': 'text',
-                          'text': '0',
+                          'text': `${position.profitLoss} USDT`,
                           'size': 'sm',
                           'align': 'end',
                           'color': colorPercentage,
@@ -1378,6 +1400,27 @@ export class GenerateMessageService {
                       {
                         'type': 'text',
                         'text': `${buyPosition.quantity}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'Cost:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${buyPosition.buyCost}`,
                         'size': 'sm',
                         'align': 'end',
                         'gravity': 'center',

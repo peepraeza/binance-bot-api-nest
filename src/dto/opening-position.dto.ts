@@ -5,6 +5,8 @@ export class OpeningPositionDataDto {
   @Expose() transactionId: number;
   @Expose() symbol: string;
   @Expose() positionSide: string;
+  @Expose() quantity: number;
+  @Expose() profitLoss: number;
   @Expose() entryPrice: number;
   @Expose() markPrice: number;
   @Expose() profitLossPercentage: number;

@@ -71,15 +71,18 @@ export class BinanceOrderService {
       const key = decrypt(user.binanceData, user.lineUserId + '|' + 'pee');
       console.log(key);
       const currentPosition = await this.transactionRepository.findOpeningPositionBySymbolAndUser(symbol, user.userId);
-      if (user.isReadyToTrade) {
+      // todo: you have to change this logic to > user.isReadyToTrade == true / when you ready to use this app
+      if (user.isReadyToTrade == false && userSelected.length > 0) {
+        let isReady = true;
+        if (!user.isReadyToTrade) isReady = false;
         if (currentPosition) {
           if (currentPosition.positionSide == positionSide) {
             // send message : already opening
             await this.sendMessageService.sendPushTextMessage(user.lineUserId, 'มี position นี้เปิดอยู่แล้ว');
           } else {
             // close current position and buy new position
-            const closePosition = await this.closeCurrentPosition(currentPosition);
-            const openPosition = await this.buyNewPosition(user.userId, symbol, side);
+            const closePosition = await this.closeCurrentPosition(currentPosition, isReady);
+            const openPosition = await this.buyNewPosition(user.userId, symbol, side, isReady);
 
             // send message : order already buy
             const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(closePosition);
@@ -90,7 +93,7 @@ export class BinanceOrderService {
           }
         } else {
           // buy new position save database
-          const openPosition = await this.buyNewPosition(user.userId, symbol, side);
+          const openPosition = await this.buyNewPosition(user.userId, symbol, side, isReady);
           const flexTemplateBuyPosition = this.generateMessageService.generateFlexMsgBuyPosition(openPosition);
           const flexBuyObject = this.sendMessageService.generateFlexMessageObject('Buy Position', flexTemplateBuyPosition);
           await this.sendMessageService.sendPushMessageObject(user.lineUserId, [flexBuyObject]);
@@ -103,7 +106,7 @@ export class BinanceOrderService {
     }
   }
 
-  async buyNewPosition(userId: number, symbol: string, side: string): Promise<BuyPositionDto> {
+  async buyNewPosition(userId: number, symbol: string, side: string, isReady = true): Promise<BuyPositionDto> {
     // open binance position
     try {
       console.log('Call function buy new position');
@@ -121,25 +124,40 @@ export class BinanceOrderService {
       const quantity = this.calQuantity(symbol, limitPrice, leverage, openPrice);
       console.log('quantity: ' + quantity);
 
-      let orderOpened;
-      if (side == SideEnum.BUY) {
-        orderOpened = await binance.futures.marketBuy(symbol, quantity);
+      let orderOpened, order, quantityBuy, orderId, buyCost, buyPrice;
+      if (isReady) {
+        if (side == SideEnum.BUY) {
+          orderOpened = await binance.futures.marketBuy(symbol, quantity);
+        } else {
+          orderOpened = await binance.futures.marketSell(symbol, quantity);
+        }
+        order = await binance.futures.orderStatus(symbol, { orderId: orderOpened['orderId'] });
+
+        quantityBuy = +order.origQty;
+        orderId = order.orderId;
+        buyCost = +order.cumQuote;
+        buyPrice = +order.avgPrice;
+
       } else {
-        orderOpened = await binance.futures.marketSell(symbol, quantity);
+        quantityBuy = quantity;
+        orderId = 1;
+        buyCost = '' + (quantity * openPrice).toFixed(2);
+        buyPrice = '' + (+openPrice).toFixed(4);
       }
-      const order = await binance.futures.orderStatus(symbol, { orderId: orderOpened['orderId'] });
       // save transaction to db
-      const orderInfo = plainToClass(OrderInfoDto, order);
+      // const orderInfo = plainToClass(OrderInfoDto, order);
       const todayDate = dateToString(new Date());
+
       const transaction = new Transaction();
       transaction.positionSide = this.positionMapping[side];
       transaction.symbol = symbol;
       transaction.isTrading = true;
       transaction.userId = userId;
-      transaction.quantity = +orderInfo.origQty;
-      transaction.buyOrderId = orderInfo.orderId;
-      transaction.buyCost = +orderInfo.cumQuote;
-      transaction.buyPrice = +orderInfo.avgPrice;
+      transaction.buyQuantity = quantityBuy;
+      transaction.leverage = leverage;
+      transaction.buyOrderId = orderId;
+      transaction.buyCost = buyCost;
+      transaction.buyPrice = buyPrice;
       transaction.buyDate = todayDate;
       transaction.updatedAt = todayDate;
       await this.transactionRepository.save(transaction);
@@ -149,42 +167,53 @@ export class BinanceOrderService {
         symbol: symbol,
         positionSide: this.positionMapping[side],
         quantity: quantity,
-        buyPrice: +orderInfo.avgPrice,
+        buyPrice: buyPrice,
         buyDate: todayDate,
+        buyCost: buyCost,
       };
     } catch (e) {
       console.log('error from: ' + e);
     }
   }
 
-  async closeCurrentPosition(currentPosition: Transaction): Promise<ClosedPositionDto> {
+  async closeCurrentPosition(currentPosition: Transaction, isReady = true): Promise<ClosedPositionDto> {
     try {
       console.log('Call function closeCurrentPosition');
+
       // close binance position
-      const { symbol, quantity, buyPrice, buyCost, positionSide, buyDate, transactionId } = currentPosition;
-      let order;
-      if (positionSide == 'LONG') {
-        order = await binance.futures.marketSell(symbol, quantity, {
-          reduceOnly: true,
-        });
+      const { symbol, buyQuantity, buyPrice, buyCost, positionSide, buyDate, transactionId } = currentPosition;
+      let orderClose, order, sellCost, closePrice, orderId;
+      if (isReady) {
+        if (positionSide == 'LONG') {
+          orderClose = await binance.futures.marketSell(symbol, buyQuantity, {
+            reduceOnly: true,
+          });
+        } else {
+          orderClose = await binance.futures.marketBuy(symbol, buyQuantity, {
+            reduceOnly: true,
+          });
+        }
+        order = plainToClass(OrderInfoDto,
+          await binance.futures.orderStatus(symbol, { orderId: orderClose['orderId'] }));
+
+        sellCost = +order.cumQuote;
+        closePrice = +order.avgPrice;
+        orderId = order.orderId;
       } else {
-        order = await binance.futures.marketBuy(symbol, quantity, {
-          reduceOnly: true,
-        });
+        orderClose = await binance.futures.markPrice(symbol);
+        sellCost = '' + (buyQuantity * orderClose['markPrice']).toFixed(4);
+        closePrice = '' + (+orderClose['markPrice']).toFixed(4);
+        orderId = 1;
       }
 
-      const orderInfo = plainToClass(OrderInfoDto,
-        await binance.futures.orderStatus(symbol, { orderId: order['orderId'] }));
-
-      const sellCost = +orderInfo.cumQuote;
-      const closePrice = +orderInfo.avgPrice;
       // save transaction to database
       const todayDate = dateToString(new Date());
       currentPosition.isTrading = false;
-      currentPosition.sellOrderId = orderInfo.orderId;
+      currentPosition.sellOrderId = orderId;
       currentPosition.sellCost = sellCost;
       currentPosition.sellDate = todayDate;
       currentPosition.sellPrice = closePrice;
+      currentPosition.sellQuantity = buyQuantity;
       currentPosition.updatedAt = todayDate;
       await this.transactionRepository.save(currentPosition);
 
@@ -209,7 +238,7 @@ export class BinanceOrderService {
         buyPrice: buyPrice,
         closedPrice: closePrice,
         closedTime: todayDate,
-        quantity: quantity,
+        quantity: buyQuantity,
         plPercentage: profitPercent,
         pl: profit,
         resultStatus: resultStatus,
@@ -220,33 +249,54 @@ export class BinanceOrderService {
     }
   }
 
-  async takeProfitPosition(currentPosition: Transaction, quantityTp: number): Promise<ClosedPositionDto> {
+  async takeProfitPosition(currentPosition: Transaction, quantityTp: number, isReady = true): Promise<ClosedPositionDto> {
     console.log('Call function takeProfitPosition');
     // close binance position
-    const { symbol, buyPrice, quantity, positionSide, buyDate, transactionId } = currentPosition;
+    const {
+      symbol,
+      buyPrice,
+      buyQuantity,
+      positionSide,
+      buyDate,
+      transactionId,
+      userId,
+      leverage,
+      buyCost,
+    } = currentPosition;
 
-    let order;
-    if (positionSide == 'LONG') {
-      order = await binance.futures.marketSell(symbol, quantityTp, {
-        reduceOnly: true,
-      });
+    let order, orderInfo, sellCost, closePrice, orderId, orderClose, profit;
+    if (isReady) {
+      if (positionSide == 'LONG') {
+        order = await binance.futures.marketSell(symbol, quantityTp, {
+          reduceOnly: true,
+        });
+      } else {
+        order = await binance.futures.marketBuy(symbol, quantityTp, {
+          reduceOnly: true,
+        });
+      }
+      orderInfo = plainToClass(OrderInfoDto,
+        await binance.futures.orderStatus(symbol, { orderId: order['orderId'] }));
+
+      sellCost = +orderInfo.cumQuote;
+      closePrice = +orderInfo.avgPrice;
+      orderId = orderInfo.orderId;
+      profit = +orderInfo.cumQuote;
     } else {
-      order = await binance.futures.marketBuy(symbol, quantityTp, {
-        reduceOnly: true,
-      });
+      orderClose = await binance.futures.markPrice(symbol);
+      sellCost = '' + (quantityTp * orderClose['markPrice']).toFixed(4);
+      console.log('sellCost: ', sellCost);
+      closePrice = '' + (+orderClose['markPrice']).toFixed(4);
+      orderId = 1;
+      profit = sellCost;
     }
 
-    const orderInfo = plainToClass(OrderInfoDto,
-      await binance.futures.orderStatus(symbol, { orderId: order['orderId'] }));
-
-    // save transaction to database
-    const sellCost = +orderInfo.cumQuote;
-    const closePrice = +orderInfo.avgPrice;
     // save transaction to database
     const todayDate = dateToString(new Date());
     currentPosition.isTrading = false;
-    currentPosition.sellOrderId = orderInfo.orderId;
+    currentPosition.sellOrderId = orderId;
     currentPosition.sellCost = sellCost;
+    currentPosition.sellQuantity = quantityTp;
     currentPosition.sellDate = todayDate;
     currentPosition.sellPrice = closePrice;
     currentPosition.updatedAt = todayDate;
@@ -255,20 +305,25 @@ export class BinanceOrderService {
     // create new transaction
     const transaction = new Transaction();
     transaction.positionSide = positionSide;
-    transaction.quantity = quantity - quantityTp;
+    transaction.buyQuantity = buyQuantity - quantityTp;
     transaction.isTrading = true;
-    transaction.buyDate = buyDate;
+    transaction.buyDate = todayDate;
     transaction.symbol = symbol;
-    transaction.buyPrice = buyPrice;
-    transaction.updatedAt = buyDate;
+    transaction.buyPrice = closePrice;
+    transaction.updatedAt = todayDate;
+    transaction.userId = userId;
+    transaction.leverage = leverage;
+    transaction.buyOrderId = orderId;
+    transaction.buyCost = closePrice * (buyQuantity - quantityTp);
+
     await this.transactionRepository.save(transaction);
     console.log('BuyNewPosition Success and save transaction to database');
 
     const profitLossHistory = new ProfitLossHistory();
-    const profitPercent = this.calProfitLossPercentage(buyPrice, +orderInfo.avgPrice, positionSide);
+    const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
+    // const profitPercent = this.calProfitLoss(buyPrice, closePrice, positionSide);
     const buyDuration = duration(new Date(buyDate), new Date());
     const resultStatus = profitPercent > 0 ? 'W' : 'L';
-    const profit = +orderInfo.cumQuote;
     profitLossHistory.transactionId = transactionId;
     profitLossHistory.pl = profit;
     profitLossHistory.plPercentage = profitPercent;
@@ -285,7 +340,7 @@ export class BinanceOrderService {
       buyPrice: buyPrice,
       closedPrice: closePrice,
       closedTime: todayDate,
-      quantity: quantity,
+      quantity: quantityTp,
       plPercentage: profitPercent,
       pl: profit,
       resultStatus: resultStatus,
@@ -315,19 +370,22 @@ export class BinanceOrderService {
     const currentPrices = resp[1];
     const updatedAt = dateToString(new Date());
     const openingPositionDataDto: OpeningPositionDataDto[] = [];
-    currentPosition.map(position => {
+    for (const position of currentPosition) {
       const positions = new OpeningPositionDataDto();
       const currentPrice = +currentPrices[position.symbol];
       const entryPrice = position.buyPrice;
+      const unrealizedProfit = position.buyQuantity * currentPrice;
       positions.transactionId = position.transactionId;
       positions.symbol = position.symbol;
       positions.positionSide = position.positionSide;
+      positions.quantity = position.buyQuantity;
+      positions.profitLoss = this.calProfitLoss(position.buyCost, unrealizedProfit, position.positionSide);
       positions.entryPrice = entryPrice;
       positions.markPrice = currentPrice;
       positions.profitLossPercentage = this.calProfitLossPercentage(entryPrice, currentPrice, position.positionSide);
       positions.duration = duration(new Date(position.buyDate), new Date(updatedAt));
       openingPositionDataDto.push(positions);
-    });
+    }
     return {
       updateTime: updatedAt,
       position: openingPositionDataDto,
@@ -350,16 +408,20 @@ export class BinanceOrderService {
   async closePositionByTransactionId(transactionId: number): Promise<ClosedPositionDto> {
     console.log('closePositionByTransactionId');
     const currentPosition = await this.transactionRepository.findOne(transactionId);
-    return await this.closeCurrentPosition(currentPosition);
+    let isReady = true;
+    if (currentPosition.buyOrderId == 1) isReady = false;
+    return await this.closeCurrentPosition(currentPosition, isReady);
   }
 
   async swapPositionByTransactionId(transactionId: number): Promise<SwapPositionDto> {
     console.log('Swap Position: Call function to close current position and buy new one.');
     const currentPosition = await this.transactionRepository.findOne(transactionId);
-    const { symbol, positionSide } = currentPosition;
-    const closedPosition = await this.closeCurrentPosition(currentPosition);
+    let isReady = true;
+    const { symbol, positionSide, buyOrderId } = currentPosition;
+    if (buyOrderId == 1) isReady = false;
+    const closedPosition = await this.closeCurrentPosition(currentPosition, isReady);
     const side = positionSide == 'LONG' ? SideEnum.SELL : SideEnum.BUY;
-    const buyNewPosition = await this.buyNewPosition(currentPosition.userId, symbol, side);
+    const buyNewPosition = await this.buyNewPosition(currentPosition.userId, symbol, side, isReady);
     return {
       symbol,
       closedPosition: closedPosition,
@@ -369,24 +431,27 @@ export class BinanceOrderService {
 
   async takeProfitByTransactionId(transactionId: number): Promise<ClosedPositionDto> {
     console.log('Take Profit: Calculate profit from cost and unrealized profit');
-    const resp = Promise.all([
-      this.transactionRepository.findOne(transactionId),
-      this.appConfigRepository.getValueNumber('binance.future_leverage'),
-    ]);
-    const currentPosition = resp[0];
-    const leverage = resp[1];
-    const priceObject = await binance.futures.markPrice(currentPosition.symbol);
+
+    const currentPosition = await this.transactionRepository.findOne(transactionId);
+    const { buyQuantity, buyPrice, symbol, leverage, buyOrderId, positionSide } = currentPosition;
+    let isReady = true;
+    const priceObject = await binance.futures.markPrice(symbol);
     const markPrice = priceObject['markPrice'];
-    const unrealizedCost = currentPosition.quantity * markPrice;
-    const cost = currentPosition.quantity * currentPosition.buyPrice;
-    const profit = unrealizedCost - cost;
+    const unrealizedCost = buyQuantity * markPrice;
+    const cost = buyQuantity * buyPrice;
+
+    const profit = this.calProfitLoss(cost, unrealizedCost, positionSide);
     if (profit <= 0) return;
-    const quantity = this.calQuantity(currentPosition.symbol, profit, leverage, markPrice);
-    if (quantity <= 0) return;
-    return await this.takeProfitPosition(currentPosition, quantity);
+    const quantityTP = this.calQuantity(symbol, profit, leverage, markPrice);
+    console.log('quantity for take profit: ', quantityTP);
+    console.log('profit: ', profit);
+    if (buyQuantity <= 0) return;
+    if (buyOrderId == 1) isReady = false;
+    return await this.takeProfitPosition(currentPosition, quantityTP, isReady);
   }
 
   calQuantity(symbol: string, limitPrice: number, leverage: number, markPrice: number): number {
+    console.log('Calculate Quantity');
     // get current price of that coin
     const betPrice = limitPrice * leverage;
     const currentPrice = markPrice;
@@ -407,6 +472,7 @@ export class BinanceOrderService {
   }
 
   calProfitLossPercentage(buyCost: number, sellCost: number, positionSide?: string): number {
+    console.log('calculate ProfitLossPercentage');
     let percentage;
     if (positionSide && positionSide == PositionSideEnum.SELL) {
       percentage = ((buyCost - sellCost) / sellCost) * 100;
@@ -417,6 +483,7 @@ export class BinanceOrderService {
   }
 
   calProfitLoss(buyCost: number, sellCost: number, positionSide?: string): number {
+    console.log('calculate ProfitLoss');
     let profit;
     if (positionSide && positionSide == PositionSideEnum.SELL) {
       profit = (buyCost - sellCost);
@@ -424,6 +491,7 @@ export class BinanceOrderService {
       profit = (sellCost - buyCost);
     }
     const profitString = '' + profit.toFixed(2);
+    console.log('profitString: ', profitString);
     return +profitString;
   }
 

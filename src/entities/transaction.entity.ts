@@ -22,11 +22,8 @@ export class Transaction {
   @Column('varchar', { name: 'symbol', length: 100 })
   symbol: string;
 
-  @Column('double', {
-    name: 'quantity',
-    transformer: new ColumnNumericTransformer(),
-  })
-  quantity: number;
+  @Column('int', { name: 'leverage', transformer: new ColumnNumericTransformer() })
+  leverage: number;
 
   @Column('tinyint', { name: 'is_trading' })
   isTrading: boolean;
@@ -43,6 +40,9 @@ export class Transaction {
   @Column('double', { name: 'buy_price', transformer: new ColumnNumericTransformer() })
   buyPrice: number;
 
+  @Column('double', { name: 'buy_quantity', transformer: new ColumnNumericTransformer() })
+  buyQuantity: number;
+
   @Column({ type: 'datetime', name: 'buy_date' })
   buyDate: Date | string;
 
@@ -54,6 +54,9 @@ export class Transaction {
 
   @Column('double', { name: 'sell_price', transformer: new ColumnNumericTransformer(), nullable: true })
   sellPrice: number;
+
+  @Column('double', { name: 'sell_quantity', transformer: new ColumnNumericTransformer() })
+  sellQuantity: number;
 
   @Column({ type: 'datetime', name: 'sell_date', nullable: true })
   sellDate: Date | string;

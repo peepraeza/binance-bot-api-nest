@@ -7,6 +7,7 @@ export class BuyPositionDto {
   @Expose() buyDate: string;
   @Expose() buyPrice: number;
   @Expose() quantity: number;
+  @Expose() buyCost: number;
 }
 
 

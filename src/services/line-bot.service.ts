@@ -82,10 +82,11 @@ export class LineBotService {
     let replyText = DEFAULT_MSG;
     if (message.type == 'text') {
       if (message.text == CLOSE_POSITION) {
+        console.log('action position');
         const currentPosition = await this.binanceOrderService.getCurrentPosition();
         if (currentPosition.position.length > 0) {
-          const flexTemplateMsgActionPositon = await this.generateMessageService.generateFlexMsgActionPosition(currentPosition);
-          const flexObject = this.sendMessageService.generateFlexMessageObject('Action Position', flexTemplateMsgActionPositon);
+          const flexTemplateMsgActionPosition = await this.generateMessageService.generateFlexMsgActionPosition(currentPosition);
+          const flexObject = this.sendMessageService.generateFlexMessageObject('Action Position', flexTemplateMsgActionPosition);
           return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexObject]);
         } else {
           replyText = MSG_NO_POSITION_OPENING;
@@ -134,6 +135,7 @@ export class LineBotService {
     }
 
     if (actionStatus == ActionPositionEnum.CLOSE_POSITION) {
+      console.log('user click close position');
       if (!isConfirmed && isConfirmed != false) {
         replyText = this.generateMessageService.generateMsgAskToConfirm(actionPosition);
         const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
@@ -154,6 +156,7 @@ export class LineBotService {
         replyText = DEFAULT_MSG;
       }
     } else if (actionStatus == ActionPositionEnum.TAKE_PROFIT) {
+      console.log('user click take profit');
       // take profit function
       if (!isConfirmed && isConfirmed != false) {
         console.log('Take Profit: Ask to confirm to action transaction');
@@ -180,6 +183,7 @@ export class LineBotService {
         replyText = DEFAULT_MSG;
       }
     } else if (actionStatus == ActionPositionEnum.SWAP_POSITION) {
+      console.log('user click swap position');
       // swap position is sell current position and buy opposite position immediately
       if (!isConfirmed && isConfirmed != false) {
         console.log('Swap Position: Ask to confirm to action transaction');
