@@ -13,11 +13,10 @@ export function countDecimals(value: number) {
   return 0;
 }
 
-export function duration(fromDate: string, toDate: string): string {
+export function duration(fromDate: Date | string, toDate: Date | string): string {
   console.log(`calculate duration, fromDate: ${fromDate}, toDate: ${toDate}`);
   const durationData = moment.duration(moment(toDate).diff(moment(fromDate)));
   const duration = plainToClass(DateDurationDto, durationData['_data']);
-  console.log(`duration data: ${duration}`);
   let text = '';
   text += duration.years ? `${duration.years} ปี ` : '';
   text += duration.months ? `${duration.months} เดือน ` : '';
@@ -28,7 +27,7 @@ export function duration(fromDate: string, toDate: string): string {
 }
 
 export function validateTimeRange(fromDate: Date, range: number): boolean {
-  const now = moment(new Date()); //todays date
+  const now = moment(dateToString(new Date())); //todays date
   const end = moment(fromDate); // another date
   const duration = moment.duration(now.diff(end));
   const minutes = duration.asMinutes();
