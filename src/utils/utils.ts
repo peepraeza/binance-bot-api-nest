@@ -14,7 +14,6 @@ export function countDecimals(value: number) {
 }
 
 export function duration(fromDate: Date | string, toDate: Date | string): string {
-  console.log(`calculate duration, fromDate: ${fromDate}, toDate: ${toDate}`);
   const durationData = moment.duration(moment(toDate).diff(moment(fromDate)));
   const duration = plainToClass(DateDurationDto, durationData['_data']);
   let text = '';
