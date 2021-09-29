@@ -13,7 +13,7 @@ export function countDecimals(value: number) {
   return 0;
 }
 
-export function duration(fromDate: string, toDate: string): string {
+export function duration(fromDate: Date | string, toDate: Date | string): string {
   const durationData = moment.duration(moment(toDate).diff(moment(fromDate)));
   const duration = plainToClass(DateDurationDto, durationData['_data']);
   let text = '';
@@ -26,10 +26,10 @@ export function duration(fromDate: string, toDate: string): string {
 }
 
 export function validateTimeRange(fromDate: Date, range: number): boolean {
-  const now = moment(new Date()); //todays date
+  const now = moment(dateToString(new Date())); //todays date
   const end = moment(fromDate); // another date
   const duration = moment.duration(now.diff(end));
   const minutes = duration.asMinutes();
-  console.log(`validate time range is more than ${range}?: ${minutes}`)
+  console.log(`validate time range is more than ${range}?: ${minutes}`);
   return minutes <= range;
 }

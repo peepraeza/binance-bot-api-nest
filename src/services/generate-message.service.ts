@@ -317,7 +317,6 @@ export class GenerateMessageService {
       const coin = position.symbol.replace('USDT', '');
       const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
       const todayDate = dateToString(new Date());
-      console.log('generate date to validate token before action position: ', todayDate);
       const flexBubble = {
         'type': 'bubble',
         'size': 'kilo',

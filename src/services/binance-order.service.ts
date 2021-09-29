@@ -66,7 +66,6 @@ export class BinanceOrderService {
       // validate signal has already opening
       console.log(user.binanceData);
       const key = decrypt(user.binanceData, user.lineUserId + '|' + 'pee');
-      console.log(key);
       const currentPosition = await this.transactionRepository.findOpeningPositionBySymbolAndUser(symbol, user.userId);
       // todo: you have to change this logic to > user.isReadyToTrade == true / when you ready to use this app
       if (user.isReadyToTrade == false && userSelected.length > 0) {
@@ -119,7 +118,6 @@ export class BinanceOrderService {
       const priceObject = resp[1];
       const openPrice = priceObject['markPrice'];
       const quantity = this.calQuantity(symbol, limitPrice, leverage, openPrice);
-      console.log('quantity: ' + quantity);
 
       let orderOpened, order, quantityBuy, orderId, buyCost, buyPrice;
       if (isReady) {
@@ -217,7 +215,7 @@ export class BinanceOrderService {
       const profitLossHistory = new ProfitLossHistory();
       const profit = this.calProfitLoss(buyCost, sellCost, positionSide);
       const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
-      const buyDuration = duration(dateToString(buyDate), dateToString(new Date()));
+      const buyDuration = duration(buyDate, todayDate);
       const resultStatus = profitPercent > 0 ? 'W' : 'L';
       profitLossHistory.transactionId = transactionId;
       profitLossHistory.pl = profit;
@@ -282,7 +280,6 @@ export class BinanceOrderService {
     } else {
       orderClose = await binance.futures.markPrice(symbol);
       sellCost = '' + (quantityTp * orderClose['markPrice']).toFixed(4);
-      console.log('sellCost: ', sellCost);
       closePrice = '' + (+orderClose['markPrice']).toFixed(4);
       orderId = 1;
       profit = sellCost;
@@ -319,7 +316,7 @@ export class BinanceOrderService {
     const profitLossHistory = new ProfitLossHistory();
     const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
     // const profitPercent = this.calProfitLoss(buyPrice, closePrice, positionSide);
-    const buyDuration = duration(dateToString(buyDate), dateToString(new Date()));
+    const buyDuration = duration(buyDate, todayDate);
     const resultStatus = profitPercent > 0 ? 'W' : 'L';
     profitLossHistory.transactionId = transactionId;
     profitLossHistory.pl = profit;
@@ -380,7 +377,7 @@ export class BinanceOrderService {
       positions.entryPrice = entryPrice;
       positions.markPrice = currentPrice;
       positions.profitLossPercentage = this.calProfitLossPercentage(entryPrice, currentPrice, position.positionSide);
-      positions.duration = duration(dateToString(position.buyDate), dateToString(updatedAt));
+      positions.duration = duration(position.buyDate, updatedAt);
       openingPositionDataDto.push(positions);
     }
     return {
@@ -440,8 +437,6 @@ export class BinanceOrderService {
     const profit = this.calProfitLoss(cost, unrealizedCost, positionSide);
     if (profit <= 0) return;
     const quantityTP = this.calQuantity(symbol, profit, leverage, markPrice);
-    console.log('quantity for take profit: ', quantityTP);
-    console.log('profit: ', profit);
     if (buyQuantity <= 0) return;
     if (buyOrderId == 1) isReady = false;
     return await this.takeProfitPosition(currentPosition, quantityTP, isReady);
@@ -487,7 +482,7 @@ export class BinanceOrderService {
     } else {
       profit = (sellCost - buyCost);
     }
-    const profitString = '' + profit.toFixed(2);
+    const profitString = '' + profit.toFixed(4);
     console.log('profitString: ', profitString);
     return +profitString;
   }
