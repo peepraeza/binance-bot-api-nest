@@ -217,7 +217,9 @@ export class BinanceOrderService {
       const profitLossHistory = new ProfitLossHistory();
       const profit = this.calProfitLoss(buyCost, sellCost, positionSide);
       const profitPercent = this.calProfitLossPercentage(buyPrice, closePrice, positionSide);
-      const buyDuration = duration(dateToString(buyDate), dateToString(new Date()));
+      const buyDateNa = dateToString(buyDate);
+      console.log('Close Position Buy Date na: ', buyDateNa)
+      const buyDuration = duration(buyDateNa, todayDate);
       const resultStatus = profitPercent > 0 ? 'W' : 'L';
       profitLossHistory.transactionId = transactionId;
       profitLossHistory.pl = profit;
