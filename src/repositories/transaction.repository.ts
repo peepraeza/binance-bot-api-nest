@@ -4,9 +4,10 @@ import { Transaction } from '../entities/transaction.entity';
 @EntityRepository(Transaction)
 export class TransactionRepository extends Repository<Transaction> {
 
-  async findOpeningPositionBySymbolAndSide(symbol): Promise<Transaction> {
+  async findOpeningPositionBySymbolAndUser(symbol: string, userId: number): Promise<Transaction> {
     return this.createQueryBuilder('t')
       .where('t.symbol = :symbol', { symbol: symbol })
+      .where('t.userId = :userId', { userId: userId })
       .andWhere('t.isTrading = 1')
       .getOne();
   }
@@ -14,7 +15,7 @@ export class TransactionRepository extends Repository<Transaction> {
   async findAllOpeningPosition(): Promise<Transaction[]> {
     return this.createQueryBuilder('t')
       .where('t.isTrading = 1')
-      .getMany()
+      .getMany();
   }
 
 

@@ -6,8 +6,8 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
-          "label": "DB Current Position",
-          "text": "db current position"
+          "label": "Current Position",
+          "text": "current position"
         }
       },
       {
@@ -15,8 +15,8 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
-          "label": "Current Position",
-          "text": "current position"
+          "label": "Close Position",
+          "text": "close position"
         }
       },
       {
@@ -33,8 +33,8 @@
         "imageUrl": "https://cdn0.iconfinder.com/data/icons/blockchain-classic/256/Binance_Coin-512.png",
         "action": {
           "type": "message",
-          "label": "Spot Balance",
-          "text": "spot balance"
+          "label": "DB Current Position",
+          "text": "db current position"
         }
       },
       {
