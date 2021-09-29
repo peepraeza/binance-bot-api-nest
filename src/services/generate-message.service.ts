@@ -316,6 +316,8 @@ export class GenerateMessageService {
       const colorPercentage = position.profitLossPercentage > 0 ? COLOR_GREEN : COLOR_RED;
       const coin = position.symbol.replace('USDT', '');
       const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+      const todayDate = dateToString(new Date());
+      console.log('generate date to validate token before action position: ', todayDate);
       const flexBubble = {
         'type': 'bubble',
         'size': 'kilo',
@@ -573,7 +575,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Take P/F',
                         'text': `#Take Profit ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
                       },
                       'height': 'sm',
                       'style': 'primary',
@@ -590,7 +592,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Swap Pos',
                         'text': `#Swap Position ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.SWAP_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.SWAP_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
                       },
                       'color': '#f2af2b',
                       'margin': 'none',
@@ -611,7 +613,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Close Position',
                         'text': `#Close Position ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${new Date()}"}`,
+                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
                       },
                       'color': '#9E0000FF',
                       'margin': 'none',
@@ -1470,6 +1472,7 @@ export class GenerateMessageService {
 
   generateQuickReplyAskConfirmTransaction(req: ActionPositionDto): QuickReply {
     const { actionStatus, transactionId, symbol, markPrice } = req;
+    const todayDate = dateToString(new Date())
     return {
       'items': [
         {
@@ -1477,7 +1480,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ใช่',
-            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${new Date()}"}`,
+            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
             'displayText': 'ใช่',
           },
         },
@@ -1486,7 +1489,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ไม่ใช่',
-            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${false},"actionTime":"${new Date()}"}`,
+            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${false},"actionTime":"${todayDate}"}`,
             'displayText': 'ไม่ใช่',
           },
         },
