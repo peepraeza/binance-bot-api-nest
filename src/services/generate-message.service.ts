@@ -134,9 +134,8 @@ export class GenerateMessageService {
 
   generateFlexMsgCurrentPosition(req: OpeningPositionDto): FlexContainer {
     const { position, updateTime } = req;
-    let average = position.reduce((total, next) => total + next.profitLossPercentage, 0) / position.length;
+    const average = position.reduce((total, next) => total + next.profitLossPercentage, 0) / position.length;
     const winPosition = position.filter(position => position.profitLossPercentage > 0);
-    average = average > 0 ? average : 0;
     const colorAvg = average > 0 ? COLOR_GREEN : COLOR_RED;
 
     const flex = {
