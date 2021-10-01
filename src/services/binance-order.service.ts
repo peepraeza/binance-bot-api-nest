@@ -74,7 +74,7 @@ export class BinanceOrderService {
         if (currentPosition) {
           if (currentPosition.positionSide == positionSide) {
             // send message : already opening
-            await this.sendMessageService.sendPushTextMessage(user.lineUserId, 'มี position นี้เปิดอยู่แล้ว');
+            await this.sendMessageService.sendPushTextMessage(user.lineUserId, `มี ${symbol} position ${positionSide} เปิดอยู่แล้ว`);
           } else {
             // close current position and buy new position
             const closePosition = await this.closeCurrentPosition(currentPosition, isReady);
