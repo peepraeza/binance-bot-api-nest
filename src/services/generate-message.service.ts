@@ -1497,6 +1497,33 @@ export class GenerateMessageService {
     return replyString;
   }
 
+  generateQuickReplyAskConfirmClosePosition(req: ActionPositionDto): QuickReply {
+    const { actionStatus, transactionId, symbol, markPrice } = req;
+    const todayDate = dateToString(new Date());
+    return {
+      'items': [
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ยืนยัน',
+            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
+            'displayText': 'ยืนยันปิด position ทั้งหมด',
+          },
+        },
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ไม่ยืนยัน ปิด position',
+            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${false},"actionTime":"${todayDate}"}`,
+            'displayText': 'ไม่ยืนยัน ปิด position',
+          },
+        },
+      ],
+    } as QuickReply;
+  }
+
   generateQuickReplyAskConfirmTransaction(req: ActionPositionDto): QuickReply {
     const { actionStatus, transactionId, symbol, markPrice } = req;
     const todayDate = dateToString(new Date());
@@ -1507,7 +1534,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ใช่',
-            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
+            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
             'displayText': 'ใช่',
           },
         },

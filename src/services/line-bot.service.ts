@@ -214,7 +214,7 @@ export class LineBotService {
       if (!isConfirmed && isConfirmed != false) {
         console.log('Close All Position: Ask to confirm to action transaction');
         replyText = this.generateMessageService.generateMsgAskToConfirmCloseAllPosition();
-        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
+        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmClosePosition(actionPosition);
         return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
 
       } else if (isConfirmed != null && isConfirmed === true) {
