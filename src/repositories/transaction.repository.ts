@@ -18,5 +18,13 @@ export class TransactionRepository extends Repository<Transaction> {
       .getMany();
   }
 
+  async findAllOpeningPositionByUserLindId(lineUserId: string): Promise<Transaction[]> {
+    return this.createQueryBuilder('t')
+      .innerJoinAndSelect('user', 'u')
+      .where('t.isTrading = 1')
+      .andWhere('u.lineUserId = :lineUserId', { lineUserId: lineUserId })
+      .getMany();
+  }
+
 
 }

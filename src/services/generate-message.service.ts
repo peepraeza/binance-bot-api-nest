@@ -137,7 +137,7 @@ export class GenerateMessageService {
     const average = position.reduce((total, next) => total + next.profitLossPercentage, 0) / position.length;
     const winPosition = position.filter(position => position.profitLossPercentage > 0);
     const colorAvg = average > 0 ? COLOR_GREEN : COLOR_RED;
-
+    const todayDate = dateToString(new Date());
     const flex = {
       'type': 'carousel',
       'contents': [
@@ -234,6 +234,27 @@ export class GenerateMessageService {
                   },
                 ],
                 'margin': 'sm',
+              },
+              {
+                'type': 'box',
+                'layout': 'horizontal',
+                'paddingTop': '10px',
+                'contents': [
+                  {
+                    'type': 'button',
+                    'action': {
+                      'type': 'postback',
+                      'label': 'Close All Position',
+                      'text': `#Close All Position`,
+                      'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_ALL_POSITION}","actionTime":"${todayDate}"}`,
+                    },
+                    'color': '#b14141',
+                    'margin': 'none',
+                    'height': 'sm',
+                    'style': 'primary',
+                    'gravity': 'center',
+                  },
+                ],
               },
             ],
           },
@@ -1468,9 +1489,17 @@ export class GenerateMessageService {
     return `ต้องการจะ ${actionMapping[actionStatus]} เหรียญ ${symbol} ใช่หรือไม่?`;
   }
 
+  generateMsgAskToConfirmCloseAllPosition(): string {
+    let replyString = '';
+    replyString += '** คำเตือน ** \n';
+    replyString += 'หากกด ยืนยัน จะทำการปิด position ที่เปิดอยู่ทั้งหมด\n';
+    replyString += 'คุณต้องการที่จะปิด position ทั้งหมดหรือไม่?';
+    return replyString;
+  }
+
   generateQuickReplyAskConfirmTransaction(req: ActionPositionDto): QuickReply {
     const { actionStatus, transactionId, symbol, markPrice } = req;
-    const todayDate = dateToString(new Date())
+    const todayDate = dateToString(new Date());
     return {
       'items': [
         {
@@ -1478,7 +1507,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ใช่',
-            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
+            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
             'displayText': 'ใช่',
           },
         },
