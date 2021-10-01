@@ -27,10 +27,10 @@ export class BinanceController {
   //   return this.binanceOrderService.calculateQuantity(symbol);
   // }
 
-  @Get('/current-position')
-  async getCurrentPosition(): Promise<object> {
-    return this.binanceOrderService.getCurrentPosition();
-  }
+  // @Get('/current-position')
+  // async getCurrentPosition(): Promise<object> {
+  //   return this.binanceOrderService.getCurrentPosition();
+  // }
 
   // @Get('/test')
   // async sendMsg(): Promise<void> {

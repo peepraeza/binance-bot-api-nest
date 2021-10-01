@@ -354,9 +354,9 @@ export class BinanceOrderService {
     return balance;
   }
 
-  async getCurrentPosition(): Promise<OpeningPositionDto> {
+  async getCurrentPosition(userLindId: string): Promise<OpeningPositionDto> {
     const resp = await Promise.all([
-      this.transactionRepository.findAllOpeningPosition(),
+      this.transactionRepository.findAllOpeningPositionByUserLindId(userLindId),
       await binance.futures.prices(),
     ]);
     const currentPosition: Transaction[] = resp[0];
@@ -440,6 +440,18 @@ export class BinanceOrderService {
     if (buyQuantity <= 0) return;
     if (buyOrderId == 1) isReady = false;
     return await this.takeProfitPosition(currentPosition, quantityTP, isReady);
+  }
+
+  async closeAllCurrentPosition(lineUserId: string): Promise<ClosedPositionDto[]> {
+    const resp: ClosedPositionDto[] = [];
+    const currentPositions = await this.transactionRepository.findAllOpeningPositionByUserLindId(lineUserId);
+    for (const currentPosition of currentPositions) {
+      let isReady = true;
+      if (currentPosition.buyOrderId == 1) isReady = false;
+      const closeResp = await this.closeCurrentPosition(currentPosition, isReady);
+      resp.push(closeResp);
+    }
+    return resp;
   }
 
   calQuantity(symbol: string, limitPrice: number, leverage: number, markPrice: number): number {

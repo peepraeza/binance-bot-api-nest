@@ -78,12 +78,12 @@ export class LineBotService {
   }
 
   async handleTextMessage(event: MessageEvent): Promise<any> {
-    const { message, replyToken } = event;
+    const { message, replyToken, source } = event;
     let replyText = DEFAULT_MSG;
     if (message.type == 'text') {
       if (message.text == CLOSE_POSITION) {
         console.log('action position');
-        const currentPosition = await this.binanceOrderService.getCurrentPosition();
+        const currentPosition = await this.binanceOrderService.getCurrentPosition(source.userId);
         if (currentPosition.position.length > 0) {
           const flexTemplateMsgActionPosition = await this.generateMessageService.generateFlexMsgActionPosition(currentPosition);
           const flexObject = this.sendMessageService.generateFlexMessageObject('Action Position', flexTemplateMsgActionPosition);
@@ -96,7 +96,7 @@ export class LineBotService {
         replyText = JSON.stringify(resp);
 
       } else if (message.text == CURRENT_POSITION) {
-        const resp = await this.binanceOrderService.getCurrentPosition();
+        const resp = await this.binanceOrderService.getCurrentPosition(source.userId);
         if (resp.position.length > 0) {
           const flex = await this.generateMessageService.generateFlexMsgCurrentPosition(resp);
           return await this.sendMessageService.sendReplyFlexMessage(replyToken, 'Current Position', flex);
@@ -104,7 +104,7 @@ export class LineBotService {
           replyText = MSG_NO_POSITION_OPENING;
         }
       } else if (message.text == CURRENT_POSITION_TEST) {
-        const resp = await this.binanceOrderService.getCurrentPosition();
+        const resp = await this.binanceOrderService.getCurrentPosition(source.userId);
         if (resp.position.length > 0) {
           replyText = this.generateMessageService.generateCurrentOpeningPositionMessage(resp);
         } else {
@@ -125,7 +125,7 @@ export class LineBotService {
   }
 
   async handlePostBackMessage(event: PostbackEvent): Promise<any> {
-    const { replyToken, postback } = event;
+    const { replyToken, postback, source } = event;
     const actionPosition = plainToClass(ActionPositionDto, JSON.parse(postback.data));
     const { actionStatus, transactionId, isConfirmed, actionTime } = actionPosition;
     let replyText;
@@ -202,6 +202,34 @@ export class LineBotService {
 
       } else if (isConfirmed != null && isConfirmed === false) {
         console.log('Swap Position: Swap Position No Confirmed');
+        replyText = MSG_CANCEL_ORDER;
+
+      } else {
+        console.log('nothing!!');
+        replyText = DEFAULT_MSG;
+      }
+    } else if (actionStatus == ActionPositionEnum.CLOSE_ALL_POSITION) {
+      console.log('user click close all position');
+      // swap position is sell current position and buy opposite position immediately
+      if (!isConfirmed && isConfirmed != false) {
+        console.log('Close All Position: Ask to confirm to action transaction');
+        replyText = this.generateMessageService.generateMsgAskToConfirmCloseAllPosition();
+        const quickReply = this.generateMessageService.generateQuickReplyAskConfirmTransaction(actionPosition);
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, quickReply);
+
+      } else if (isConfirmed != null && isConfirmed === true) {
+        console.log('Close All Position: Close All Position Confirmed');
+        const resp = await this.binanceOrderService.closeAllCurrentPosition(source.userId);
+        const flexResp = [];
+        resp.forEach(position => {
+          const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(position);
+          const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
+          flexResp.push(flexClosedObject);
+        });
+        return await this.sendMessageService.sendReplyMessageObject(replyToken, flexResp);
+
+      } else if (isConfirmed != null && isConfirmed === false) {
+        console.log('Close All Position: Close All Position Not Confirmed');
         replyText = MSG_CANCEL_ORDER;
 
       } else {
