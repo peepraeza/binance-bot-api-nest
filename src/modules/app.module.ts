@@ -15,6 +15,7 @@ import { SendMessageService } from '../services/send-message.service';
 import { UserRepository } from '../repositories/user.repository';
 import { UserService } from '../services/user.service';
 import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping.repository';
+import { SymbolRepository } from '../repositories/symbol.repository';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -22,7 +23,7 @@ import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping
   }), TypeOrmModule.forRootAsync({
     useClass: DbConfig,
   }),
-    TypeOrmModule.forFeature([TransactionRepository, ProfitLossHistoryRepository, UserRepository, UserSymbolMappingRepository])],
+    TypeOrmModule.forFeature([TransactionRepository, ProfitLossHistoryRepository, UserRepository, UserSymbolMappingRepository, SymbolRepository])],
   controllers: [AppController, WebhookController, BinanceController],
   providers: [AppService, BinanceOrderService, LineBotService, GenerateMessageService, SendMessageService, UserService],
 

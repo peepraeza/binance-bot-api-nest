@@ -4,6 +4,7 @@ export const CURRENT_POSITION = 'current position';
 export const TRADING_SUMMARY = 'trading summary';
 export const CURRENT_POSITION_TEST = 'db current position';
 export const CLOSE_POSITION = 'close position';
+export const SETTING = 'setting';
 export const DEFAULT_MSG = 'เลือกดูข้อมูลตามข้อความตัวอย่างด้านล่าง...';
 export const MSG_NO_POSITION_OPENING = 'ไม่มี position ที่กำลังเปิดอยู่ในขณะนี้';
 export const MSG_NO_DATA = 'ไม่มีข้อมูล ณ ขณะนี้';

@@ -1,0 +1,42 @@
+{
+  "quickReplySetting": {
+    "items": [
+      {
+        "type": "action",
+        "action": {
+          "type": "postback",
+          "label": "ตั้งค่าเหรียญ",
+          "data": "{\"type\":\"setting\", \"data\":{\"settingType\":\"coin\"}}",
+          "displayText": "ตั้งค่าเหรียญที่ต้องการเล่น"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "postback",
+          "label": "ตั้งค่าสถานะ",
+          "data": "{\"type\":\"setting\", \"data\":{\"settingType\":\"status\"}}",
+          "displayText": "ตั้งค่าสถานะการเล่น"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "postback",
+          "label": "ตั้งค่าคีย์",
+          "data": "{\"type\":\"setting\", \"data\":{\"settingType\":\"binance\"}}",
+          "displayText": "ตั้งค่าข้อมูล binance"
+        }
+      },
+      {
+        "type": "action",
+        "action": {
+          "type": "postback",
+          "label": "ออกจาก setting mode",
+          "data": "{\"type\":\"setting\", \"data\":{\"settingType\":\"quit\"}}",
+          "displayText": "ออกจาก setting mode"
+        }
+      }
+    ]
+  }
+}

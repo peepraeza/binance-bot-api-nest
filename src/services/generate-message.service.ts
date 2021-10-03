@@ -14,6 +14,8 @@ import { QuickReply } from '@line/bot-sdk';
 import { SwapPositionDto } from '../dto/swap-position.dto';
 import { BuyPositionDto } from '../dto/buy-position.dto';
 import { PostbackTypeEnum } from '../enums/postback-type.enum';
+import { CoinSelectedDto } from '../dto/coin-selected.dto';
+import { SettingTypeEnum } from '../enums/setting-type.enum';
 
 
 @Injectable()
@@ -681,6 +683,144 @@ export class GenerateMessageService {
     return carousel;
   }
 
+  generateFlexMsgCoinSelected(coinSelected: CoinSelectedDto[]): FlexContainer {
+    const flex = {
+      'type': 'carousel',
+      'contents': [
+        {
+          'type': 'bubble',
+          'size': 'mega',
+          'body': {
+            'type': 'box',
+            'layout': 'vertical',
+            'contents': [
+              {
+                'margin': 'md',
+                'type': 'box',
+                'layout': 'horizontal',
+                'contents': [
+                  {
+                    'type': 'filler',
+                  },
+                  {
+                    'type': 'text',
+                    'text': 'Coin',
+                    'color': '#111111',
+                    'weight': 'bold',
+                    'size': 'sm',
+                    'align': 'center',
+                  },
+                  {
+                    'type': 'text',
+                    'text': 'LEV',
+                    'color': '#111111',
+                    'weight': 'bold',
+                    'size': 'sm',
+                    'align': 'center',
+                  },
+                  {
+                    'type': 'text',
+                    'text': 'Cost',
+                    'color': '#111111',
+                    'weight': 'bold',
+                    'size': 'sm',
+                    'align': 'center',
+                  },
+                ],
+              },
+              {
+                'type': 'separator',
+                'color': '#cccccc',
+                'margin': 'md',
+              },
+            ],
+          },
+          'footer': {
+            'type': 'box',
+            'layout': 'vertical',
+            'contents': [
+              {
+                'type': 'box',
+                'layout': 'horizontal',
+                'contents': [
+                  {
+                    'type': 'button',
+                    'action': {
+                      'type': 'message',
+                      'label': 'วิธีการตั้งค่าเหรียญ',
+                      'text': "ตัวอย่าง => #1 <add/remove> <coin> <leverage> <limitCost>",
+                    },
+                    'color': '#b14141',
+                    'margin': 'none',
+                    'height': 'sm',
+                    'style': 'primary',
+                    'gravity': 'center',
+                  },
+                ],
+              },
+            ],
+          },
+          'styles': {
+            'body': {
+              'backgroundColor': '#ffffff',
+            },
+            'footer': {
+              'separator': true,
+            },
+          },
+        },
+      ],
+    } as FlexContainer;
+    const defaultImg = 'https://www.iconpacks.net/icons/2/free-cryptocurrency-coin-icon-2422-thumb.png';
+
+    coinSelected.forEach(coinSelect => {
+      const coin = coinSelect.coin;
+      const imageUrl = symbolImage[coin] ? symbolImage[coin] : defaultImg;
+      const leverage = coinSelect.leverage;
+      const limitCost = coinSelect.limitPrice;
+      const flexContainer = {
+        'margin': 'md',
+        'type': 'box',
+        'layout': 'horizontal',
+        'contents': [
+          {
+            'type': 'image',
+            'url': imageUrl,
+            'aspectRatio': '120:48',
+          },
+          {
+            'type': 'text',
+            'text': `${coin}`,
+            'color': '#000000',
+            'weight': 'bold',
+            'size': 'sm',
+            'align': 'center',
+            'gravity': 'center',
+          },
+          {
+            'type': 'text',
+            'text': `${leverage}`,
+            'weight': 'bold',
+            'size': 'sm',
+            'align': 'center',
+            'gravity': 'center',
+          },
+          {
+            'type': 'text',
+            'text': `${limitCost}`,
+            'weight': 'bold',
+            'size': 'sm',
+            'align': 'center',
+            'gravity': 'center',
+          },
+        ],
+      };
+      flex['contents'][0]['body']['contents'].push(flexContainer);
+    });
+
+    return flex;
+  }
+
   generateFlexMsgClosedAllPosition(closePositions: ClosedPositionDto[]): FlexContainer {
     const flex = {
       type: 'bubble',
@@ -824,7 +964,7 @@ export class GenerateMessageService {
         ],
       };
 
-      flex['body']['contents'].push(contents)
+      flex['body']['contents'].push(contents);
     });
 
     return flex;
@@ -1689,6 +1829,12 @@ export class GenerateMessageService {
     return replyString;
   }
 
+  generateMsgAskToConfirmSettingMode(): string {
+    let replyString = '';
+    replyString += 'คุณต้องการเข้าสู่โหมดการตั้งค่าใช่หรือไม่?';
+    return replyString;
+  }
+
   generateQuickReplyAskConfirmClosePosition(req: ActionPositionDto): QuickReply {
     const { actionStatus, transactionId, symbol, markPrice } = req;
     const todayDate = dateToString(new Date());
@@ -1710,6 +1856,31 @@ export class GenerateMessageService {
             'label': 'ไม่ยืนยัน ปิด position',
             'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${actionStatus}","isConfirmed":${false},"actionTime":"${todayDate}"}}`,
             'displayText': 'ไม่ยืนยัน ปิด position',
+          },
+        },
+      ],
+    } as QuickReply;
+  }
+
+  generateQuickReplyAskConfirmSettingMode(): QuickReply {
+    return {
+      'items': [
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ใช่',
+            'data': `{"type":"${PostbackTypeEnum.SETTING}", "data":{"isConfirmed":${true},"settingType":"${SettingTypeEnum.LOGIN}"}}`,
+            'displayText': 'ใช่',
+          },
+        },
+        {
+          'type': 'action',
+          'action': {
+            'type': 'postback',
+            'label': 'ไม่ใช่',
+            'data': `{"type":"${PostbackTypeEnum.SETTING}", "data":{"isConfirmed":${false},"settingType":"${SettingTypeEnum.LOGIN}"}}`,
+            'displayText': 'ไม่ใช่',
           },
         },
       ],
