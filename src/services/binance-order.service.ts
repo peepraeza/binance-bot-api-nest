@@ -228,6 +228,7 @@ export class BinanceOrderService {
 
       // return data from binance
       return {
+        transactionId: transactionId,
         symbol: symbol,
         positionSide: positionSide,
         buyPrice: buyPrice,
@@ -329,6 +330,7 @@ export class BinanceOrderService {
 
     // return data from binance
     return {
+      transactionId: transactionId,
       symbol: symbol,
       positionSide: positionSide,
       buyPrice: buyPrice,
@@ -346,6 +348,12 @@ export class BinanceOrderService {
     const balance = await binance.spot.balance();
     console.log(balance);
     return balance;
+  }
+
+  async getClosedPositionDetail(transactionId: number): Promise<ClosedPositionDto> {
+    const closePositionObj = await this.transactionRepository.getClosePositionDetailsByTransactionId(transactionId);
+    const closePosition = plainToClass(ClosedPositionDto, closePositionObj[0])
+    return closePosition;
   }
 
   async getFutureBalance(): Promise<object> {

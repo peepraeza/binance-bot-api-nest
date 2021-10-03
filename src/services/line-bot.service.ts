@@ -26,6 +26,9 @@ import { getConfig } from '../configs/config';
 import { validateTimeRange } from '../utils/utils';
 import { UserRepository } from '../repositories/user.repository';
 import { UserService } from './user.service';
+import { PostbackTypeDto } from '../dto/postback-type.dto';
+import { PostbackTypeEnum } from '../enums/postback-type.enum';
+import { ClosedPositionDto } from '../dto/closed-position.dto';
 
 @Injectable()
 export class LineBotService {
@@ -125,8 +128,19 @@ export class LineBotService {
   }
 
   async handlePostBackMessage(event: PostbackEvent): Promise<any> {
-    const { replyToken, postback, source } = event;
-    const actionPosition = plainToClass(ActionPositionDto, JSON.parse(postback.data));
+    const postBackData = JSON.parse(event.postback.data);
+    const postbackInfo = plainToClass(PostbackTypeDto, postBackData);
+    if (postbackInfo.type == PostbackTypeEnum.ACTION_POSITION) {
+      const actionPosition = plainToClass(ActionPositionDto, postbackInfo.data);
+      await this.actionPosition(actionPosition, event);
+    } else if (postbackInfo.type == PostbackTypeEnum.VIEW_CLOSE_POSITION) {
+      const closedPositionDto = plainToClass(ClosedPositionDto, postbackInfo.data);
+      await this.viewClosedPositionDetail(closedPositionDto.transactionId, event);
+    }
+  }
+
+  async actionPosition(actionPosition: ActionPositionDto, event: PostbackEvent): Promise<any> {
+    const { replyToken, source } = event;
     const { actionStatus, transactionId, isConfirmed, actionTime } = actionPosition;
     let replyText;
     if (!validateTimeRange(new Date(actionTime), +this.actionRangeTime)) {
@@ -220,13 +234,9 @@ export class LineBotService {
       } else if (isConfirmed != null && isConfirmed === true) {
         console.log('Close All Position: Close All Position Confirmed');
         const resp = await this.binanceOrderService.closeAllCurrentPosition(source.userId);
-        const flexResp = [];
-        resp.forEach(position => {
-          const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(position);
-          const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
-          flexResp.push(flexClosedObject);
-        });
-        return await this.sendMessageService.sendReplyMessageObject(replyToken, flexResp);
+        const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedAllPosition(resp);
+        const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition, null);
+        return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexClosedObject]);
 
       } else if (isConfirmed != null && isConfirmed === false) {
         console.log('Close All Position: Close All Position Not Confirmed');
@@ -241,6 +251,15 @@ export class LineBotService {
     }
     console.log('send message complete transaction');
     return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText);
+  }
+
+  async viewClosedPositionDetail(transactionId: number, event: PostbackEvent): Promise<any> {
+    const { replyToken } = event;
+    console.log('confirm transaction to close position!');
+    const resp = await this.binanceOrderService.getClosedPositionDetail(transactionId);
+    const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(resp);
+    const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition);
+    return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexClosedObject]);
   }
 
   async handleRegisterLineBot(event: MessageEvent): Promise<any> {
