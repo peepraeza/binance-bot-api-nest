@@ -13,6 +13,7 @@ import { ActionPositionDto } from '../dto/action-position.dto';
 import { QuickReply } from '@line/bot-sdk';
 import { SwapPositionDto } from '../dto/swap-position.dto';
 import { BuyPositionDto } from '../dto/buy-position.dto';
+import { PostbackTypeEnum } from '../enums/postback-type.enum';
 
 
 @Injectable()
@@ -246,7 +247,7 @@ export class GenerateMessageService {
                       'type': 'postback',
                       'label': 'Close All Position',
                       'text': `#Close All Position`,
-                      'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_ALL_POSITION}","actionTime":"${todayDate}"}`,
+                      'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${ActionPositionEnum.CLOSE_ALL_POSITION}","actionTime":"${todayDate}"}}`,
                     },
                     'color': '#b14141',
                     'margin': 'none',
@@ -405,6 +406,27 @@ export class GenerateMessageService {
                   'layout': 'vertical',
                   'paddingAll': '10px',
                   'contents': [
+                    {
+                      'type': 'box',
+                      'layout': 'horizontal',
+                      'contents': [
+                        {
+                          'type': 'text',
+                          'text': 'TransactionId:',
+                          'weight': 'bold',
+                          'size': 'sm',
+                          'align': 'start',
+                          'gravity': 'center',
+                        },
+                        {
+                          'type': 'text',
+                          'text': `${position.transactionId}`,
+                          'size': 'sm',
+                          'align': 'end',
+                          'gravity': 'center',
+                        },
+                      ],
+                    },
                     {
                       'type': 'box',
                       'layout': 'horizontal',
@@ -594,7 +616,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Take P/F',
                         'text': `#Take Profit ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
+                        'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${ActionPositionEnum.TAKE_PROFIT}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}}`,
                       },
                       'height': 'sm',
                       'style': 'primary',
@@ -611,7 +633,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Swap Pos',
                         'text': `#Swap Position ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.SWAP_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
+                        'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${ActionPositionEnum.SWAP_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}}`,
                       },
                       'color': '#f2af2b',
                       'margin': 'none',
@@ -632,7 +654,7 @@ export class GenerateMessageService {
                         'type': 'postback',
                         'label': 'Close Position',
                         'text': `#Close Position ${position.symbol}`,
-                        'data': `{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}`,
+                        'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${ActionPositionEnum.CLOSE_POSITION}","transactionId":${position.transactionId},"markPrice":${position.markPrice},"symbol":"${position.symbol}","actionTime":"${todayDate}"}}`,
                       },
                       'color': '#9E0000FF',
                       'margin': 'none',
@@ -657,6 +679,155 @@ export class GenerateMessageService {
       }
     }
     return carousel;
+  }
+
+  generateFlexMsgClosedAllPosition(closePositions: ClosedPositionDto[]): FlexContainer {
+    const flex = {
+      type: 'bubble',
+      size: 'kilo',
+      direction: 'ltr',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                'type': 'text',
+                'text': 'Closed Position',
+                'weight': 'bold',
+                'size': 'md',
+                'align': 'center',
+                'offsetBottom': '4px',
+                'contents': [],
+              },
+            ],
+          },
+        ],
+      },
+    } as FlexContainer;
+    closePositions.forEach(closedPosition => {
+      const resultStatusMapping = { 'W': 'WIN', 'L': 'LOSS' };
+      const colorSide = closedPosition.positionSide == 'LONG' ? COLOR_GREEN : COLOR_RED;
+      const colorPercentage = closedPosition.plPercentage > 0 ? COLOR_GREEN : COLOR_RED;
+      const coin = closedPosition.symbol.replace('USDT', '');
+      const imageUrl = symbolImage[coin] ? symbolImage[coin] : symbolImage['DEFAULT'];
+      const contents = {
+        'type': 'box',
+        'layout': 'vertical',
+        'margin': 'xs',
+        'contents': [
+          {
+            'type': 'separator',
+            'margin': 'xs',
+          },
+          {
+            'type': 'box',
+            'layout': 'horizontal',
+            'offsetTop': '5px',
+            'paddingAll': '5px',
+            'contents': [
+              {
+                'type': 'box',
+                'layout': 'vertical',
+                'flex': 6,
+                'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'margin': 'xs',
+                    'contents': [
+                      {
+                        'type': 'image',
+                        'url': `${imageUrl}`,
+                        'flex': 1,
+                        'gravity': 'top',
+                        'size': 'xxs',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.symbol}`,
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'flex': 6,
+                        'align': 'start',
+                        'margin': 'xs',
+                        'contents': [],
+                      },
+                      {
+                        'type': 'text',
+                        'text': `(${closedPosition.positionSide.charAt(0)})`,
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'color': colorSide,
+                        'flex': 2,
+                        'contents': [],
+                      },
+                    ],
+                  },
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'margin': 'xs',
+                    'contents': [
+                      {
+                        'type': 'filler',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${resultStatusMapping[closedPosition.resultStatus]}`,
+                        'size': 'sm',
+                        'color': colorPercentage,
+                        'flex': 4,
+                        'align': 'start',
+                        'margin': 'xs',
+                        'contents': [],
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.plPercentage}`,
+                        'size': 'sm',
+                        'color': colorPercentage,
+                        'flex': 5,
+                        'align': 'start',
+                        'margin': 'xs',
+                        'contents': [],
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'type': 'box',
+                'layout': 'vertical',
+                'flex': 3,
+                'paddingAll': '1px',
+                'contents': [
+                  {
+                    'type': 'button',
+                    'action': {
+                      'type': 'postback',
+                      'label': 'Detail',
+                      'text': `#Detail Close Position ${closedPosition.symbol}`,
+                      'data': `{"type":"${PostbackTypeEnum.VIEW_CLOSE_POSITION}", "data":{"transactionId":"${closedPosition.transactionId}"}}`,
+                    },
+                    'height': 'sm',
+                    'style': 'primary',
+                    'color': '#f1ba62',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      flex['body']['contents'].push(contents)
+    });
+
+    return flex;
   }
 
   generateFlexMsgTakeProfit(closedPosition: ClosedPositionDto): FlexContainer {
@@ -1038,6 +1209,27 @@ export class GenerateMessageService {
                 'layout': 'vertical',
                 'paddingAll': '10px',
                 'contents': [
+                  {
+                    'type': 'box',
+                    'layout': 'horizontal',
+                    'contents': [
+                      {
+                        'type': 'text',
+                        'text': 'TransactionId:',
+                        'weight': 'bold',
+                        'size': 'sm',
+                        'align': 'start',
+                        'gravity': 'center',
+                      },
+                      {
+                        'type': 'text',
+                        'text': `${closedPosition.transactionId}`,
+                        'size': 'sm',
+                        'align': 'end',
+                        'gravity': 'center',
+                      },
+                    ],
+                  },
                   {
                     'type': 'box',
                     'layout': 'horizontal',
@@ -1507,7 +1699,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ยืนยัน',
-            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
+            'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${actionStatus}","isConfirmed":${true},"actionTime":"${todayDate}"}}`,
             'displayText': 'ยืนยันปิด position ทั้งหมด',
           },
         },
@@ -1516,7 +1708,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ไม่ยืนยัน ปิด position',
-            'data': `{"actionStatus":"${actionStatus}","isConfirmed":${false},"actionTime":"${todayDate}"}`,
+            'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${actionStatus}","isConfirmed":${false},"actionTime":"${todayDate}"}}`,
             'displayText': 'ไม่ยืนยัน ปิด position',
           },
         },
@@ -1534,7 +1726,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ใช่',
-            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${todayDate}"}`,
+            'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${true},"actionTime":"${todayDate}"}}`,
             'displayText': 'ใช่',
           },
         },
@@ -1543,7 +1735,7 @@ export class GenerateMessageService {
           'action': {
             'type': 'postback',
             'label': 'ไม่ใช่',
-            'data': `{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${false},"actionTime":"${todayDate}"}`,
+            'data': `{"type":"${PostbackTypeEnum.ACTION_POSITION}", "data":{"actionStatus":"${actionStatus}","transactionId":${transactionId},"markPrice":${markPrice},"symbol":"${symbol}","isConfirmed":${false},"actionTime":"${todayDate}"}}`,
             'displayText': 'ไม่ใช่',
           },
         },

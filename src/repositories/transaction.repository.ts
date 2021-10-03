@@ -26,5 +26,24 @@ export class TransactionRepository extends Repository<Transaction> {
       .getMany();
   }
 
+  async getClosePositionDetailsByTransactionId(transactionId: number): Promise<object[]> {
+    return await this.query(`
+        select 
+            t.transaction_id as transactionId,
+             symbol,
+             position_side  as positionSide,
+             buy_price      as buyPrice,
+             sell_price     as closedPrice,
+             sell_quantity  as quantity,
+             pl,
+             pl_percentage  as plPercentage,
+             buy_date       as closedTime,
+             duration,
+             result_status  as resultStatus
+        from transaction t
+            inner join profit_loss_history plh on t.transaction_id = plh.transaction_id
+        where plh.transaction_id = ${transactionId}`);
+  }
+
 
 }
