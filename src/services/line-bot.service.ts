@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MessageEvent, PostbackEvent } from '@line/bot-sdk';
+import { MessageEvent, PostbackEvent, QuickReply } from '@line/bot-sdk';
 import {
   CLOSE_POSITION,
   CURRENT_POSITION,
@@ -11,6 +11,7 @@ import {
   MSG_ERR_TOKEN_EXPIRED,
   MSG_NO_DATA,
   MSG_NO_POSITION_OPENING,
+  SETTING,
   TRADING_SUMMARY,
 } from '../constants/message.constant';
 import { GenerateMessageService } from './generate-message.service';
@@ -29,6 +30,11 @@ import { UserService } from './user.service';
 import { PostbackTypeDto } from '../dto/postback-type.dto';
 import { PostbackTypeEnum } from '../enums/postback-type.enum';
 import { ClosedPositionDto } from '../dto/closed-position.dto';
+import { SettingModeDto } from '../dto/setting-mode.dto';
+import { SettingTypeEnum } from '../enums/setting-type.enum';
+import { getConnection } from 'typeorm';
+import { User } from '../entities/user.entity';
+import * as quickReply from '../constant-json/quick-reply/quick-reply-setting.json';
 
 @Injectable()
 export class LineBotService {
@@ -63,7 +69,15 @@ export class LineBotService {
           await this.handlePostBackRegister(event);
         }
       } else {
-        if (user.binanceData) {
+        if (user.isSetting) {
+          if (event.type == EventTypeEnum.MESSAGE) {
+            console.log('type message setting mode');
+            await this.handleTextMessageSettingMode(user, event);
+          } else if (event.type == EventTypeEnum.POSTBACK) {
+            console.log('type postback');
+            await this.handlePostBackMessageSettingMode(event);
+          }
+        } else if (user.binanceData) {
           if (event.type == EventTypeEnum.MESSAGE) {
             console.log('type message');
             await this.handleTextMessage(event);
@@ -74,9 +88,52 @@ export class LineBotService {
         } else {
           await this.handleFillBinanceData(event);
         }
-
       }
+    }
+  }
 
+  async handleTextMessageSettingMode(user: User, event: MessageEvent): Promise<any> {
+    const { message, replyToken } = event;
+    const qpSetting = quickReply['quickReplySetting'] as QuickReply;
+    if (message.type == 'text') {
+      if (message.text.slice(0, 2) == '#1') {
+        const settingCoin = await this.binanceOrderService.settingCoinByUserId(user.userId, message.text);
+        if(settingCoin){
+          return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ทำการตั้งค่าเหรียญเรียบร้อยแล้ว', qpSetting);
+        }else {
+          return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ไม่สามารถตั้งค่าเหรียญได้ กรุณาตรวจสอบข้อมูล และลองใหม่อีกครั้ง..', qpSetting);
+        }
+
+      } else if (message.text.slice(0, 2) == '#2') {
+        return;
+      } else if (message.text.slice(0, 2) == '#3') {
+        return;
+      } else {
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, 'คุณกำลังอยู่ใน setting mode กรุณาเลือกเมนูด้านล่าง..', qpSetting);
+      }
+    } else {
+      return;
+    }
+  }
+
+  async handlePostBackMessageSettingMode(event: PostbackEvent): Promise<any> {
+    const { postback, replyToken, source } = event;
+    const qpSetting = quickReply['quickReplySetting'] as QuickReply;
+    const settingData = plainToClass(SettingModeDto, JSON.parse(postback.data).data);
+    if (settingData.settingType == SettingTypeEnum.COIN) {
+      const coinSelected = await this.binanceOrderService.getCoinSelectedByUser(source.userId);
+      const flexTemplateMsgCoinSelected = await this.generateMessageService.generateFlexMsgCoinSelected(coinSelected);
+      const flexObject = this.sendMessageService.generateFlexMessageObject('Coin Selected', flexTemplateMsgCoinSelected, qpSetting);
+      const textObject = this.sendMessageService.generateTextMessageObject('เหรียญที่คุณต้องการจะ trade มีดังนี้..');
+      return await this.sendMessageService.sendReplyMessageObject(replyToken, [textObject, flexObject]);
+    } else if (settingData.settingType == SettingTypeEnum.QUIT) {
+      await getConnection()
+        .createQueryBuilder()
+        .update(User)
+        .set({ isSetting: false })
+        .where('lineUserId = :lineUserId', { lineUserId: source.userId })
+        .execute();
+      return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ออกจาก setting mode แล้ว');
     }
   }
 
@@ -120,6 +177,10 @@ export class LineBotService {
         } else {
           replyText = MSG_NO_DATA;
         }
+      } else if (message.text == SETTING) {
+        replyText = this.generateMessageService.generateMsgAskToConfirmSettingMode();
+        const qpSettingMode = this.generateMessageService.generateQuickReplyAskConfirmSettingMode();
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, replyText, qpSettingMode);
       } else if (message.text.includes('#')) {
         return;
       }
@@ -136,6 +197,9 @@ export class LineBotService {
     } else if (postbackInfo.type == PostbackTypeEnum.VIEW_CLOSE_POSITION) {
       const closedPositionDto = plainToClass(ClosedPositionDto, postbackInfo.data);
       await this.viewClosedPositionDetail(closedPositionDto.transactionId, event);
+    } else if (postbackInfo.type == PostbackTypeEnum.SETTING) {
+      const settingData = plainToClass(SettingModeDto, postbackInfo.data);
+      await this.settingMode(settingData, event);
     }
   }
 
@@ -260,6 +324,24 @@ export class LineBotService {
     const flexTemplateClosedPosition = this.generateMessageService.generateFlexMsgClosedPosition(resp);
     const flexClosedObject = this.sendMessageService.generateFlexMessageObject('Close Position', flexTemplateClosedPosition);
     return await this.sendMessageService.sendReplyMessageObject(replyToken, [flexClosedObject]);
+  }
+
+  async settingMode(settingModeDto: SettingModeDto, event: PostbackEvent): Promise<any> {
+    const { replyToken, source } = event;
+    if (settingModeDto.settingType == SettingTypeEnum.LOGIN) {
+      if (settingModeDto.isConfirmed) {
+        await getConnection()
+          .createQueryBuilder()
+          .update(User)
+          .set({ isSetting: true })
+          .where('lineUserId = :lineUserId', { lineUserId: source.userId })
+          .execute();
+        const qpSetting = quickReply['quickReplySetting'] as QuickReply;
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ท่านได้เข้าสู่ setting mode แล้ว', qpSetting);
+      } else {
+        return await this.sendMessageService.sendReplyTextMessage(replyToken, 'ยกเลิกการเข้า setting mode');
+      }
+    }
   }
 
   async handleRegisterLineBot(event: MessageEvent): Promise<any> {

@@ -20,6 +20,9 @@ export class User {
   @Column('tinyint', { name: 'is_ready_to_trade', default: false })
   isReadyToTrade: boolean;
 
+  @Column('tinyint', { name: 'is_setting', default: false })
+  isSetting: boolean;
+
   @Column('varchar', { name: 'binance_data', length: 255, nullable: true })
   binanceData: string;
 

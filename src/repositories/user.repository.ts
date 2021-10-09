@@ -21,5 +21,17 @@ export class UserRepository extends Repository<User> {
       .getMany();
   }
 
+  async findCoinSelectedByLineUserId(lineUserId: string): Promise<object[]> {
+    return await this.query(`
+          select 
+            symbol_name as coin,
+            leverage,
+            limit_price as limitPrice
+          from user
+                   inner join user_symbol_mapping usm on user.user_id = usm.user_id
+                   inner join symbol s on usm.symbol_id = s.symbol_id
+          where line_user_id = '${lineUserId}'`);
+  }
+
 
 }

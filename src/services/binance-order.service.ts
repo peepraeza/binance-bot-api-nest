@@ -22,9 +22,13 @@ import { SwapPositionDto } from '../dto/swap-position.dto';
 import { OrderInfoDto } from '../dto/order-info.dto';
 import { getConfig } from '../configs/config';
 import { UserRepository } from '../repositories/user.repository';
-import { User } from '../entities/user.entity';
 import { UserSymbolMappingRepository } from '../repositories/user-symbol-mapping.repository';
 import { decrypt } from '../middlewares/cryptojs.middleware';
+import { CoinSelectedDto } from '../dto/coin-selected.dto';
+import { UserSymbolMapping } from '../entities/user-symbol-mapping.entity';
+import { SymbolRepository } from '../repositories/symbol.repository';
+import { getConnection } from 'typeorm';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class BinanceOrderService {
@@ -45,6 +49,8 @@ export class BinanceOrderService {
     private userRepository: UserRepository,
     @InjectRepository(UserSymbolMappingRepository)
     private userSymbolMappingRepository: UserSymbolMappingRepository,
+    @InjectRepository(SymbolRepository)
+    private symbolRepository: SymbolRepository,
   ) {
     this.lineUserId = getConfig('LINE_USER_ID');
     this.lineGroupId = getConfig('LINE_GROUP_ID');
@@ -352,8 +358,56 @@ export class BinanceOrderService {
 
   async getClosedPositionDetail(transactionId: number): Promise<ClosedPositionDto> {
     const closePositionObj = await this.transactionRepository.getClosePositionDetailsByTransactionId(transactionId);
-    const closePosition = plainToClass(ClosedPositionDto, closePositionObj[0])
-    return closePosition;
+    return plainToClass(ClosedPositionDto, closePositionObj[0]);
+  }
+
+  async getCoinSelectedByUser(lineUserId: string): Promise<CoinSelectedDto[]> {
+    const coinsObj = await this.userRepository.findCoinSelectedByLineUserId(lineUserId);
+    return plainToClass(CoinSelectedDto, coinsObj);
+  }
+
+  async settingCoinByUserId(userId: number, commandSetting: string): Promise<boolean> {
+    const isCmdValidFormat = { 'add': true, 'remove': true, 'edit': true };
+    const cmd = commandSetting.split(' ');
+    const action = cmd[1];
+    const coin = cmd[2];
+    const leverage = +cmd[3];
+    const limitCost = +cmd[4];
+    const isCmdValid = isCmdValidFormat[action];
+    const symbol = coin.toUpperCase();
+    const symbolData = minNotional[symbol + 'USDT'];
+    const isValidLeverage = leverage >= 1 && leverage <= 25;
+    if (!isCmdValid || !symbolData && (action == 'add' || action == 'edit')) {
+      if (!isValidLeverage || !limitCost) return false;
+    }
+
+    if (action == 'add') {
+      const coinInfo = await this.userSymbolMappingRepository.findSymbolInfoByUserIdAndSymbol(userId, symbol);
+      if (coinInfo) return false;
+      await this.userSymbolMappingRepository.delete(coinInfo);
+      return true;
+    } else if (action == 'edit') {
+      const coinInfo = await this.userSymbolMappingRepository.findSymbolInfoByUserIdAndSymbol(userId, symbol);
+      if (!coinInfo) return false;
+      await getConnection()
+        .createQueryBuilder()
+        .update(UserSymbolMapping)
+        .set({ leverage: leverage, limitPrice: limitCost })
+        .where('userId = :userId', { userId: coinInfo.userId })
+        .andWhere('symbolId = :symbolId', { symbolId: coinInfo.symbolId })
+        .execute();
+      return true;
+    } else {
+      const symbolInfo = await this.symbolRepository.findOne({ symbolName: symbol });
+      const userSymbolMapping = new UserSymbolMapping();
+      userSymbolMapping.userId = userId;
+      userSymbolMapping.symbolId = symbolInfo.symbolId;
+      userSymbolMapping.leverage = leverage;
+      userSymbolMapping.limitPrice = limitCost;
+      await this.userSymbolMappingRepository.save(userSymbolMapping);
+      return true;
+    }
+
   }
 
   async getFutureBalance(): Promise<object> {

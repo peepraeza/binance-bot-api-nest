@@ -4,7 +4,7 @@ import lineClient from '../configs/line.config';
 import { getConfig } from '../configs/config';
 import * as quickReplyJson from '../constant-json/quick-reply/quick-reply-default.json';
 import * as Types from '@line/bot-sdk/lib/types';
-import { QuickReply } from '@line/bot-sdk/lib/types';
+import { QuickReply, TextMessage } from '@line/bot-sdk/lib/types';
 import { FlexContainer } from '@line/bot-sdk/dist/types';
 
 @Injectable()
@@ -80,19 +80,21 @@ export class SendMessageService {
   }
 
 
-
-  generateTextMessageObject(replyText: string, quickReply?: QuickReply): Message[] {
-    let qp = quickReplyJson['quickReply'] as QuickReply;
-    if (quickReply) {
+  generateTextMessageObject(replyText: string, quickReply?: QuickReply): TextMessage {
+    const qpDefault = quickReplyJson['quickReply'] as QuickReply;
+    let qp;
+    if (quickReply === undefined) {
+      qp = qpDefault;
+    } else if (quickReply === null) {
+      qp = null;
+    } else {
       qp = quickReply;
     }
-    return [
-      {
-        type: 'text',
-        text: replyText,
-        quickReply: qp || null,
-      },
-    ] as Types.Message[];
+    return {
+      type: 'text',
+      text: replyText,
+      quickReply: qp || null,
+    } as TextMessage;
   }
 
   generateFlexMessageObject(altText: string, flex: FlexContainer, quickReply?: QuickReply): FlexMessage {
